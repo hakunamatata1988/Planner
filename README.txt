@@ -12,4 +12,13 @@ timedelta - class that is usefull for getting a diffrence between two times/date
 
 datatime.datatime.today() - returns the datime object that represents current point of time (down to milisec) 
 
+subtracting two datatime object returns timedelta object
+syntax datatime.timedelta(x,y,z) - x days, y sec, z microseconds
+
+https://stackoverflow.com/questions/1345827/how-do-i-find-the-time-difference-between-two-datetime-objects-in-python
+
+https://www.geeksforgeeks.org/python-difference-between-two-dates-in-minutes-using-datetime-timedelta-method/
+
+
+
 

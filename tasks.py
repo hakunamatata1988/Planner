@@ -1,8 +1,9 @@
 # %%
 import datetime
+import copy
 
 class Task():
-    def __init__(self, name , duration = 0, time = 0, parent = None):
+    def __init__(self, name , duration = 0, s_time = 0, parent = None):
         # name = name of the task
         self.name = name
 
@@ -12,7 +13,7 @@ class Task():
 
         # time = how long have you been doing the task
         # format = ??
-        self.time = time
+        self.s_time = s_time
 
         # subtasks = a list of subtasks that self is divided to
         # elements of a subtasks list can be task instances or strings that represents name of a subtasks (in case the subtasks not exist as a instance of a task class yet)
@@ -116,6 +117,21 @@ class Task():
 
             child.active = False
             child.time_history[-1].append(now)
+
+    def time(self):
+        history = copy.deepcopy(self.time_history)
+        if not history:
+            return datetime.timedelta(0)
+
+        if self.active:
+            history[-1].append(datetime.datetime.today())
+            
+        t = datetime.timedelta(0)
+        for start,end in history:
+            dt = end - start
+            t += dt
+
+        return t
 
     
     def __getitem__(self, idx):
