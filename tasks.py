@@ -3,7 +3,7 @@ import datetime
 import copy
 
 class Task():
-    def __init__(self, name , duration = 0, s_time = 0, parent = None):
+    def __init__(self, name , duration = 0, u_time = 0, parent = None):
         # name = name of the task
         self.name = name
 
@@ -11,9 +11,9 @@ class Task():
         # format = ??
         self.duration = duration
 
-        # time = how long have you been doing the task
-        # format = ??
-        self.s_time = s_time
+        # time = how long have you been doing the task untracted in time_history
+        # format = ??, not implemented in self.time() yet
+        self.u_time = u_time
 
         # subtasks = a list of subtasks that self is divided to
         # elements of a subtasks list can be task instances or strings that represents name of a subtasks (in case the subtasks not exist as a instance of a task class yet)
@@ -31,11 +31,17 @@ class Task():
             self.parents += parent.parents
             parent.add(self)
 
+        # list of a breakpoints
+        # make a class Breakpoint that has two attributes: name and status.
+        # think how to make use of breakpoints and subtasks that make sense
+        self.breakpoints = []
 
         self.active = False
 
         # list of pairs [start,stop] that represents period of time that the task was performed
         self.time_history = []
+
+        self.notes = ''
 
     def add(self, task):
         self.subtasks.append(task)
@@ -164,14 +170,12 @@ class Task():
 
             subtasks = ', '.join(subtasks_names_lst)
 
-        str =  f"Task's name : {self.name}.\nTask's parents: {parents}.\nActive : {self.active}.\nTask's history: {self.time_history}.\nTask's duration : {self.duration}.\nTasks's time : {self.time}.\nSubtasks: {subtasks}."
+        str =  f"Name : {self.name}.\nParents: {parents}.\nActive : {self.active}.\nTime history: {self.time_history}.\nDuration : {self.duration}.\nUntracted time : {self.u_time}.\nTime : {self.time()}.\nSubtasks: {subtasks}.\nBreakpoints : {self.breakpoints}.\nNotes : {self.notes}."
         return str
 
 
     def __repr__(self):
         return self.name
-
-
 
 
 # random tree for testing
@@ -190,4 +194,12 @@ python = Task("python", parent = learning)
 data_str = Task("data structures", parent = python)
 
 trees = Task("trees", parent = data_str)
+lists = Task("lists", parent = data_str)
+
+decorators = Task("decorator", parent = python)
+oop = Task("oop", parent = python)
+
+cl = Task("cl", parent = oop)
+inheritence = Task("inheritence", parent = oop)
+atr = Task("atr", parent = oop)
 

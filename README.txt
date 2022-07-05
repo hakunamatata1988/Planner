@@ -19,6 +19,12 @@ https://stackoverflow.com/questions/1345827/how-do-i-find-the-time-difference-be
 
 https://www.geeksforgeeks.org/python-difference-between-two-dates-in-minutes-using-datetime-timedelta-method/
 
+---
+Testing tree:
 
+                    learning
+            math      |               python
+    algebra| topology||      data_str  | decorators |    oop
+pol_div   ||        ||| trees | lists ||        || cl | inheritence | atr
 
 
