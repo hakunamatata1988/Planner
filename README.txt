@@ -10,6 +10,9 @@ time - class that represents time
 datetime - class that represents time with a date
 timedelta - class that is usefull for getting a diffrence between two times/dates 
 
+How to print timedelta objest without miliseconds?
+https://stackoverflow.com/questions/18470627/how-do-i-remove-the-microseconds-from-a-timedelta-object
+
 datatime.datatime.today() - returns the datime object that represents current point of time (down to milisec) 
 
 subtracting two datatime object returns timedelta object
@@ -24,7 +27,7 @@ Testing tree:
 
                     learning
             math      |               python
-    algebra| topology||      data_str  | decorators |    oop
+    algebra| topology||      data_str  | decorator |    oop
 pol_div   ||        ||| trees | lists ||        || cl | inheritence | atr
 
 

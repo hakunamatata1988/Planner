@@ -3,16 +3,16 @@ import datetime
 import copy
 
 class Task():
-    def __init__(self, name , duration = 0, u_time = 0, parent = None):
+    def __init__(self, name , duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent = None):
         # name = name of the task
         self.name = name
 
-        # duration = lonag are you planing to do a task
-        # format = ??
+        # duration = how long are you planing to do a task
+        # format = ??, probably timedelta object
         self.duration = duration
 
-        # time = how long have you been doing the task untracted in time_history
-        # format = ??, not implemented in self.time() yet
+        # u_time = how long have you been doing the task untracted in time_history
+        # note that this will not be implemented ni parents yet
         self.u_time = u_time
 
         # subtasks = a list of subtasks that self is divided to
@@ -29,21 +29,21 @@ class Task():
 
         if parent:
             self.parents += parent.parents
-            parent.add(self)
+            parent.add_subtask(self)
 
-        # list of a breakpoints
-        # make a class Breakpoint that has two attributes: name and status.
-        # think how to make use of breakpoints and subtasks that make sense
-        self.breakpoints = []
+        # list of a checkpoints
+        # think how to make use of checkpoints and subtasks that make sense
+        self.checkpoints = []
 
         self.active = False
 
         # list of pairs [start,stop] that represents period of time that the task was performed
+        # add a variable to track what was going on at this periods (i.e. what subtasks was running)
         self.time_history = []
 
         self.notes = ''
 
-    def add(self, task):
+    def add_subtask(self, task):
         self.subtasks.append(task)
         task.parents = [self] + self.parents
 
@@ -127,7 +127,7 @@ class Task():
     def time(self):
         history = copy.deepcopy(self.time_history)
         if not history:
-            return datetime.timedelta(0)
+            return self.u_time
 
         if self.active:
             history[-1].append(datetime.datetime.today())
@@ -137,7 +137,12 @@ class Task():
             dt = end - start
             t += dt
 
-        return t
+        return t + self.u_time
+
+    def add_checkpoint(self, name, done = False, notes = ''):
+        checkpoint = Checkpoint(name, done, notes) 
+        self.checkpoints.append(checkpoint)   
+
 
     
     def __getitem__(self, idx):
@@ -170,7 +175,7 @@ class Task():
 
             subtasks = ', '.join(subtasks_names_lst)
 
-        str =  f"Name : {self.name}.\nParents: {parents}.\nActive : {self.active}.\nTime history: {self.time_history}.\nDuration : {self.duration}.\nUntracted time : {self.u_time}.\nTime : {self.time()}.\nSubtasks: {subtasks}.\nBreakpoints : {self.breakpoints}.\nNotes : {self.notes}."
+        str =  f"Name : {self.name}.\nParents: {parents}.\nActive : {self.active}.\nTime history: {self.time_history}.\nDuration : {self.duration}.\nUntracted time : {self.u_time}.\nTime : {self.time()}.\nSubtasks: {subtasks}.\nCheckpoints : {self.checkpoints}.\nNotes : {self.notes}."
         return str
 
 
@@ -203,3 +208,22 @@ cl = Task("cl", parent = oop)
 inheritence = Task("inheritence", parent = oop)
 atr = Task("atr", parent = oop)
 
+class Checkpoint():
+    # Class that represents checkpoint in your tasks
+    # May want to convert checkpoints to tasks (and tasks to check points?)
+
+    def __init__(self, name, done = False, notes = ''):
+        self.name = name
+        self.done = done
+        self.notes = notes
+
+    # not sure if that is working correctly
+    def __repr__(self):
+        done = "done" if self.done else "not done"
+        return f"({self.name}, {done}, {self.notes})"
+
+    def checkpoint_status(self):
+        self.done = not self.done
+
+    def checkpoint_to_task(self,parent):
+        pass
