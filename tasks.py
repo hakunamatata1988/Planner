@@ -37,8 +37,9 @@ class Task():
 
         self.active = False
 
-        # list of pairs [start,stop] that represents period of time that the task was performed
-        # add a variable to track what was going on at this periods (i.e. what subtasks was running)
+        # list [start,stop] that represents period of time that a task (or a child)was performed, 
+        # add a function (?) that shows was going on at this periods (i.e. what subtasks was running)
+     
         self.time_history = []
 
         self.notes = ''

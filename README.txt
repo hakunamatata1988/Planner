@@ -10,7 +10,7 @@ time - class that represents time
 datetime - class that represents time with a date
 timedelta - class that is usefull for getting a diffrence between two times/dates 
 
-How to print timedelta objest without miliseconds?
+How to print timedelta object without miliseconds?
 https://stackoverflow.com/questions/18470627/how-do-i-remove-the-microseconds-from-a-timedelta-object
 
 datatime.datatime.today() - returns the datime object that represents current point of time (down to milisec) 
