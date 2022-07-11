@@ -123,7 +123,8 @@ class Task():
         for id in self.parents_id: # the order in self.parents is important
             parent = id_to_task(id)
             parent.active = False
-            for child in parent.subtasks:
+            for id in parent.subtasks_id:
+                child = id_to_task(id)
                 if child.active:
                     parent.active = True
                     break
