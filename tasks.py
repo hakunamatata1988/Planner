@@ -1,6 +1,10 @@
 # %%
 import datetime
+import sqlite3
 import copy
+
+con = sqlite3.connect('data.db')
+
 
 def id_to_task(id):
     pass # return a Task object from database or return an error
@@ -132,8 +136,11 @@ class Task():
             if parent.active == False:
                 parent.time_history[-1].append(now)
 
+            #    save
+
         # update the state of childs
-        for child in self.childs():
+        for id in self.childs():
+            child = id_to_task(id)
             if not child:
                 continue
             if child.active == False:
@@ -141,6 +148,8 @@ class Task():
 
             child.active = False
             child.time_history[-1].append(now)
+
+        # save
 
     def time(self):
         history = copy.deepcopy(self.time_history)
