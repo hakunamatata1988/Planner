@@ -2,42 +2,48 @@
 import datetime
 import copy
 
+def id_to_task(id):
+    pass # return a Task object from database or return an error
+
 class Task():
-    def __init__(self, name , duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent = None):
+    def __init__(self, name , id , duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent = None):
         # name = name of the task
         self.name = name
 
-        # duration = how long are you planing to do a task
-        # format = ??, probably timedelta object
+        # id = unique number that identify task
+        # need to add some logic for database
+        self.id = id
+
+        # duration = how long are you planing to do a task. timedelta object
         self.duration = duration
 
         # u_time = how long have you been doing the task untracted in time_history
         # note that this will not be implemented ni parents yet
         self.u_time = u_time
 
-        # subtasks = a list of subtasks that self is divided to
-        # elements of a subtasks list can be task instances or strings that represents name of a subtasks (in case the subtasks not exist as a instance of a task class yet)
-        self.subtasks = []
+        # subtasks = a list of id subtasks that self is divided to
+        self.subtasks_id = []
 
         # Add some object that will store the information when the tasks was going
 
-        # May be usefull to add a pointer to the parent
-        # Potentially you may want to show all parents (i.e parent of parent)
+        # List of parents' id
         # There may be some situation when you want more then one 'direct' parent
-        # You want to avoid loops in the tree of tasks
-        self.parents = []
+        # You want to avoid loops in the tree of tasks/parents
+        # order is important, why?
+        self.parents_id = []
 
         if parent:
             self.parents += parent.parents
-            parent.add_subtask(self)
+            parent.add_subtask(self) 
 
-        # list of a checkpoints
+        # list of a checkpoints, checkpoint suppose to be of str type
         # think how to make use of checkpoints and subtasks that make sense
         self.checkpoints = []
 
         self.active = False
 
-        # list [start,stop] that represents period of time that a task (or a child)was performed, 
+        # list of [start,stop] that represents period of time that a task (or a child) was performed, 
+        # start and stop are datetime.datetime objects
         # add a function (?) that shows was going on at this periods (i.e. what subtasks was running)
      
         self.time_history = []
@@ -45,49 +51,58 @@ class Task():
         self.notes = ''
 
     def add_subtask(self, task):
-        self.subtasks.append(task)
-        task.parents = [self] + self.parents
+        self.subtasks_id.append(task.id)
+        task.parents_id = [self] + self.parents_id
 
         # update child's parents
-        def update(childs):
-            if childs == []:
+        def update(childs_id):
+            if childs_id == []:
                 return
-            for child in childs:
-                child.parents += task.parents
-                update(child)
+            for id in childs_id:
+                child = id_to_task(id)
+                child.parents += task.parents_id
+                update(id)
 
-        update(task.subtasks)
+
+        update(task.subtasks_id)
+
+        # save all changes to db
 
 
     def remove(self, task):
-        self.subtasks.remove(task)
+        self.subtasks_id.remove(task.id)
+        # save chenges to db
 
-    def divid(self, *tasks):
-        # doesnt look useful for now
-        # make more sense to add one task at the time
+    def deletet(task):
         pass
 
+
     def activate(self):
+        # you can try diffrent implementation when db will be done
+
         if self.active:
             return
 
         self.active = True
         now = datetime.datetime.today()
         self.time_history.append([now])
-        for parent in self.parents:
+        for id in self.parents_id:
+            parent = id_to_task(id)
             if parent.active:
                 continue
             parent.active = True
             parent.time_history.append([now])
 
+        # save chenges to db
+
     def childs(self):
-        # Returns the list of all childes (all generations)
+        # Returns the list of ids of all childes (all generations)
 
         def childs_recurence(task,lst):
-            if not task.subtasks:
+            if not task.subtasks_id:
                 return lst
             else:
-                lst += task.subtasks
+                lst += task.subtasks_id
                 for sub in task.subtasks:
                     childs_recurence(sub, lst)
 
@@ -105,7 +120,8 @@ class Task():
 
 
         # update the state of parents
-        for parent in self.parents: # the order in self.parents is important
+        for id in self.parents_id: # the order in self.parents is important
+            parent = id_to_task(id)
             parent.active = False
             for child in parent.subtasks:
                 if child.active:

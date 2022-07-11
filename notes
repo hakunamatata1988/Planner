@@ -1,0 +1,10 @@
+line 32  parent.add_subtask(self) # likly change to self.id
+
+think how to deal with time history in database
+
+create a function that converts id -> task
+
+tast all the functions!
+
+when to use database interface and when to use objects and attributes?
+    you probably can simplyfy program by not callint task to simple edits
