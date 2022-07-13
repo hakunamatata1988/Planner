@@ -10,6 +10,7 @@ cur = con.cursor()
 def create_table(name):
         # potential SQL injection
         # can add atomic task to time_history intervals
+        # can add notes
         with con:
                 cur.execute(""" CREATE TABLE {} (
                         id INTEGER PRIMARY KEY,
@@ -19,19 +20,19 @@ def create_table(name):
                         subtasks_id  TEXT,
                         parent_id INTEGER,
                         time_history TEXT,
-                        checpoints TEXT,
+                        checkpoints TEXT,
                         active TEXT
                 )      
                 """.format(name))
 
 
-def insert(table, name, id = None, duration = 0, u_time = 0, parent_id = None):
+def insert(table, name, id = None, duration = 0, u_time = datetime.timedelta(0), parent_id = None):
 # not sure how many parameters you need
 # potential SQL injection
         with con:
                 cur.execute(f"""INSERT INTO {table} VALUES 
-                        (NULL, ?, ?, ?, '[]', ?,'[]', '', 'False')""",
-                        (name, duration, u_time, parent_id)
+                        (NULL, ?, ?, ?, '[]', ?,'[]', '[]', 'False')""",
+                        (name, duration, repr(u_time), parent_id)
                 )
                 con.commit()
 
@@ -153,7 +154,37 @@ def deactivate(table, id):
                         lst = eval(subtask['time_history'])
                         lst[-1].append(now)
                         cur.execute(f"UPDATE {table} SET time_history = '{repr(lst)}', active = 'False' WHERE id = {id_c}")                         
-                                   
+
+def time(table, id):
+        with con:
+                task = get_row(table,id)
+                time_lst = eval(task['time_history'])
+
+                if time_lst == []:
+                        return eval(task['u_time'])
+
+                if task['active'] == 'True':
+                        time_lst[-1].append(datetime.datetime.today())
+
+                t = datetime.timedelta(0)
+                for start,end in time_lst:
+                        dt = end - start
+                        t +=dt
+                
+                return t + eval(task['u_time'])
+
+
+def add_checkpoint(table, id, description):
+        # You can make it more robust. You can get points (progress) for a checkpoint or set time (or data) to reach checkpoint
+        with con:
+                task = get_row(table,id)
+                checkpoint_lst = eval(task['checkpoints'])+[[description,False]]
+                print(repr(checkpoint_lst))
+                cur.execute(f"UPDATE {table} SET checkpoints = ? WHERE id = {id}", (repr(checkpoint_lst),))
+
+
+
+
 # Uncomment to test
 
 # delete_table("Tasks")
@@ -167,12 +198,17 @@ def deactivate(table, id):
 # insert("Tasks","new task6", parent_id =5)
 # insert("Tasks","new task7", parent_id =5)
 # insert("Tasks","new task8", parent_id =7)
+
 table = "Tasks"
 
-# activate(table, 8)
-deactivate(table,7)
+# activate(table, 5)
+# deactivate(table,5)
+add_checkpoint(table, 1, 
+'buy a milk')
 
 show_table("Tasks")
+
+# print(time(table, 5))
 # con.commit()
 
 # con.close()
