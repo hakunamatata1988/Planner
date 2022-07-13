@@ -9,6 +9,7 @@ cur = con.cursor()
 
 def create_table(name):
         # potential SQL injection
+        # can add atomic task to time_history intervals
         with con:
                 cur.execute(""" CREATE TABLE {} (
                         id INTEGER PRIMARY KEY,
@@ -124,8 +125,10 @@ def deactivate(table, id):
                         return 
 
                 now = datetime.datetime.today()
-                new = [eval(task['time_history'])[-1] +[now]]
-                cur.execute(f"UPDATE {table} SET time_history = '{repr(new)}', active = 'False' WHERE id = {id}")      
+                lst = eval(task['time_history'])
+                lst[-1].append(now)
+
+                cur.execute(f"UPDATE {table} SET time_history = '{repr(lst)}', active = 'False' WHERE id = {id}")      
 
                 # update state of parents, can be optimize (order?)
                 for id_p in get_parents(table,id):
@@ -138,30 +141,36 @@ def deactivate(table, id):
                                         break
 
                         if not flag:
-                                new = [eval(parent['time_history'])[-1]+[now]]
-                                cur.execute(f"UPDATE {table} SET time_history = '{repr(new)}', active = 'False' WHERE id = {id_p}")   
+                                lst = eval(parent['time_history'])
+                                lst[-1].append(now)
+                                cur.execute(f"UPDATE {table} SET time_history = '{repr(lst)}', active = 'False' WHERE id = {id_p}")   
 
+                # update state of childs
+                for id_c in get_childs(table,id):
+                        subtask = get_row(table,id_c)
+                        if subtask['active'] == 'False':
+                                continue
+                        lst = eval(subtask['time_history'])
+                        lst[-1].append(now)
+                        cur.execute(f"UPDATE {table} SET time_history = '{repr(lst)}', active = 'False' WHERE id = {id_c}")                         
+                                   
+# Uncomment to test
 
+# delete_table("Tasks")
+# create_table("Tasks")
 
-                                           
-
-
-
-delete_table("Tasks")
-create_table("Tasks")
-
-insert("Tasks","new task1")
-insert("Tasks","new task2", parent_id =1)
-insert("Tasks","new task3", parent_id =1)
-insert("Tasks","new task4", parent_id =2)
-insert("Tasks","new task5")
-insert("Tasks","new task6", parent_id =5)
-insert("Tasks","new task7", parent_id =5)
-insert("Tasks","new task8", parent_id =7)
+# insert("Tasks","new task1")
+# insert("Tasks","new task2", parent_id =1)
+# insert("Tasks","new task3", parent_id =1)
+# insert("Tasks","new task4", parent_id =2)
+# insert("Tasks","new task5")
+# insert("Tasks","new task6", parent_id =5)
+# insert("Tasks","new task7", parent_id =5)
+# insert("Tasks","new task8", parent_id =7)
 table = "Tasks"
 
-activate(table, 2)
-deactivate(table,2)
+# activate(table, 8)
+deactivate(table,7)
 
 show_table("Tasks")
 # con.commit()
