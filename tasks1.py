@@ -203,10 +203,10 @@ table = "Tasks"
 
 # activate(table, 5)
 # deactivate(table,5)
-add_checkpoint(table, 1, 
-'buy a milk')
+# add_checkpoint(table, 1, 
+# 'buy a milk')
 
-show_table("Tasks")
+# show_table("Tasks")
 
 # print(time(table, 5))
 # con.commit()
