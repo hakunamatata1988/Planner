@@ -206,7 +206,7 @@ table = "Tasks"
 # add_checkpoint(table, 1, 
 # 'buy a milk')
 
-# show_table("Tasks")
+show_table("Tasks")
 
 # print(time(table, 5))
 # con.commit()
