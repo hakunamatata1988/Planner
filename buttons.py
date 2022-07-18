@@ -1,5 +1,8 @@
+import interface2
 import PySimpleGUI as sg
 import datetime
+import sqlite3
+
 
 
 def task_layout(task_id = None):
@@ -36,7 +39,7 @@ def tasks_layout(tasks_lst):
     return layout
 
 
-def add_task():
+def add_task(cur):
     ''' The function that is starting when pressing add button on current tasks tab. The function is returning raw, an object that you should extend the layout of current tasks tab. It also update the database 
     '''
     h = 60
@@ -44,31 +47,36 @@ def add_task():
     r = 2
     s = 10
     multiline_high = 5
-    Column1 = [[sg.Text('Task ')],[sg.Text('Duration')],[sg.Text('Untruck Time')],[sg.Text('Notes',size = (s,multiline_high))]]
-    Column2 = [
-            [sg.Input(key = 'name',size = (h,v))],
+    Data = [
+            [
+            sg.Text('Task ', size = (h//3-r,v)), 
+            sg.Input(key = 'name',size = (h,v))
+            ],
                
            [
+            sg.Text('Duration',size = (h//3-r,v)),
             sg.Input('hours',key = '-DURATIONh-',size = (h//3-r,v)),
             sg.Input('minutes',key = '-DURATIONm-',size = (h//3-r,v)),
             sg.Input('seconds',key = '-DURATIONs-',size = (h//3-r,v))
-           ], # check how to dived raws
+           ], 
         
             [
+            sg.Text('Untruck Time',size = (h//3-r,v)),
             sg.Input('hours',key = '-TIMEh-',size = (h//3-r,v)),
             sg.Input('minutes',key = '-TIMEm-',size = (h//3-r,v)),
             sg.Input('seconds',key = '-TIMEs-',size = (h//3-r,v))  
             ],
 
-            [sg.Stretch(), sg.Button('Select parent')],
+            [sg.Text('Parent',size = (h//3-r,v)), sg.Text('None',size = (h//3-r,v)), sg.Stretch(), sg.Button('Select parent', key = 'Select parent')],
+            # pop up with db table
 
-            [sg.Stretch(), sg.Button('Add checkpoint')],
+            [sg.Text('Checkpoints',size = (h//3-r,v)),sg.Stretch(), sg.Button('Add checkpoint', key = 'Add checkpoint' )],
         
-           [sg.Multiline(key = '-NOTES-',size = (h,5))] 
+           [sg.Text('Notes', size = (h//3-r,v)), sg.Multiline(key = '-NOTES-',size = (h,5))] 
         
     ]
     
-    layout = [[sg.Column(layout = Column1),sg.Column(layout = Column2)],[sg.Button("Add", key = "-ADD-")]]
+    layout = [[Data,sg.Button("Add", key = "-ADD-")]]
     
     window_add_tasks = sg.Window("Add task",layout)
     
@@ -77,6 +85,13 @@ def add_task():
 
         if event == sg.WIN_CLOSED:
             break
+
+        if event == 'Select parent':
+            show_db(cur)
+
+        if event == 'Add checkpoint':
+            print("Checkpoints")
+
             
         if event == "-ADD-":
             duration = datetime.timedelta(hours = values['-DURATIONh-'], minutes = values['-DURATIONm-'], seconds = values['-DURATIONs-'])
@@ -85,13 +100,33 @@ def add_task():
 
             # task = Task(values['-TASK-'], duration,time, values['-NOTES-'])
             # database update and get task id
-            task_id = 3
+            task_id = None
             break 
-
+    task_id = None
     raw = [task_layout(task_id)]
 
     window_add_tasks.close()
 
     return raw
 
-add_task()
+def show_db(cur):
+    t, lst = interface2.create_sq_table(interface2.tasks1.cur)
+
+    window = sg.Window('Database', layout =[[t]], default_element_size=(12,1))
+
+    while True:    
+
+        event, values = window.read()    
+        print('Event = ' ,event,'Values = ', values)  
+
+        print('value = ', lst[int(event[2][0])][int(event[2][1])])
+
+
+        if event == sg.WIN_CLOSED:             
+            break  
+
+con = sqlite3.connect('data.db')
+add_task(con)
+
+con.close()
+        

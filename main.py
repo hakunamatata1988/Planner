@@ -10,8 +10,17 @@ tab1_layout = [
         [sg.Button("Add task", key = "-ADD TASK-"),sg.Button("Clear", key = "-CLEAR-"),sg.Button("Day", key = "-DAY-"), sg.Stretch(), sg.Text(key = "INFO", justification= "right")]
     ]
 
+t,lst = interface2.create_sq_table(interface2.tasks1.cur)
+tab2_layout= [
+    [t],
+    [sg.Button("Add to db", key = "Add to db"),
+    sg.Button("Remove from db", key = "-Remove from db"),
+    sg.Button("Add to current", key = "Add to current")]
+    ]
 
-tab2_layout,lst = interface2.create_sq_table(interface2.tasks1.cur)
+
+
+
 
 # note that this is loaded at the beginning, what if the data change?
 
@@ -33,8 +42,11 @@ while True:
         break  
 
     if event[0] == 'Tab' :
-        #print('event = ', event, 'values = ',values['Tab'])
-        print(event[2][0])
+        print('data in event:')
+        data_selected = [t[row] for row in values[event]]
+        print(data_selected)
+
+
         # add task with right id to current tasks table
         # for now probably refresh the window
         # in future you can make some task not visable to get rid of refreshing effect
