@@ -47,6 +47,9 @@ def add_task(cur):
     r = 2
     s = 10
     multiline_high = 5
+    
+    checkpoints = []
+
     Data = [
             [
             sg.Text('Task ', size = (h//3-r,v)), 
@@ -67,10 +70,10 @@ def add_task(cur):
             sg.Input('seconds',key = '-TIMEs-',size = (h//3-r,v))  
             ],
 
-            [sg.Text('Parent',size = (h//3-r,v)), sg.Text('None',size = (h//3-r,v)), sg.Stretch(), sg.Button('Select parent', key = 'Select parent')],
+            [sg.Text('Parent',size = (h//3-r,v)), sg.Text('None', key = "Parent",size = (h//3-r,v)), sg.Stretch(), sg.Button('Select parent', key = 'Select parent')],
             # pop up with db table
 
-            [sg.Text('Checkpoints',size = (h//3-r,v)),sg.Stretch(), sg.Button('Add checkpoint', key = 'Add checkpoint' )],
+            [sg.Text('Checkpoints',size = (h//3-r,v)),sg.Text(str(checkpoints), key = 'Checkpoints',size = (h//3-r,v)), sg.Stretch(), sg.Button('Edit checkpoints', key = 'Edit checkpoints' )],
         
            [sg.Text('Notes', size = (h//3-r,v)), sg.Multiline(key = '-NOTES-',size = (h,5))] 
         
@@ -87,10 +90,14 @@ def add_task(cur):
             break
 
         if event == 'Select parent':
-            show_db(cur)
+            parent_id, parent_name = id_name_from_db(cur)
+            window_add_tasks['Parent'].update(f'Id: {parent_id} Name: {parent_name}')
 
-        if event == 'Add checkpoint':
-            print("Checkpoints")
+
+
+        if event == 'Edit checkpoints':
+            checkpoints = edit_checkpoints(checkpoints)
+            window_add_tasks['Checkpoints'].update(str(checkpoints))
 
             
         if event == "-ADD-":
@@ -100,8 +107,10 @@ def add_task(cur):
 
             # task = Task(values['-TASK-'], duration,time, values['-NOTES-'])
             # database update and get task id
+
             task_id = None
             break 
+
     task_id = None
     raw = [task_layout(task_id)]
 
@@ -109,24 +118,79 @@ def add_task(cur):
 
     return raw
 
-def show_db(cur):
+def id_name_from_db(cur):
     t, lst = interface2.create_sq_table(interface2.tasks1.cur)
 
-    window = sg.Window('Database', layout =[[t]], default_element_size=(12,1))
+    window = sg.Window('Database', layout =[[t],[sg.Button("Choose", key = "Choose")]], default_element_size=(12,1))
 
     while True:    
 
         event, values = window.read()    
-        print('Event = ' ,event,'Values = ', values)  
 
-        print('value = ', lst[int(event[2][0])][int(event[2][1])])
+        if values['Tab'] and event == "Choose":
+            id = lst[values['Tab'][0]][0]
+            name = lst[values['Tab'][0]][1]
+            break
 
 
         if event == sg.WIN_CLOSED:             
             break  
 
+    window.close()
+    return id,name
+
+def edit_checkpoints(checkpoints):
+    column = [[sg.Button('Up    ')],[sg.Button('Down')]]
+    layout = [[sg.Listbox(checkpoints,s = (30,10), key = 'checkpoints'), sg.Column(column)], 
+    [sg.Button('Add'),sg.Button('Remove'), sg.B("Save",key = 'Save')]]
+
+    window_checkpoints = sg.Window("Checkpoints",layout )
+
+    while True:
+        event, values = window_checkpoints.read()
+
+        if event == sg.WIN_CLOSED:
+            break
+
+        if event == 'Add':
+            e,v = read_value('Add checkpoint', value = '')
+            if e == 'Save':
+                checkpoints.append(v['Input'])
+                window_checkpoints['checkpoints'].update(checkpoints)
+
+        if event == 'Remove':
+            checkpoints.remove(values['checkpoints'][0])
+            window_checkpoints['checkpoints'].update(checkpoints)
+
+        if event == "Up":
+            pass
+        if event == "Down":
+            pass
+        if event == 'Save':
+            break
+    window_checkpoints.close()
+
+    return checkpoints
+
+def read_value(title, value = ''):
+    layout = [[sg.Input(value, key = 'Input')], [sg.Submit('Save'), sg.Cancel('Cancel')]]
+     
+    window = sg.Window(title, layout)    
+
+    event, values = window.read()    
+    window.close()
+
+    return event, values
+
+
+
+
+
 con = sqlite3.connect('data.db')
+
 add_task(con)
+# edit_checkpoints(['do this', 'remember this'])
+# print(read_value('miki','some values'))
 
 con.close()
         
