@@ -26,13 +26,13 @@ def create_table(name):
                 """.format(name))
 
 
-def insert(table, name, id = None, duration = 0, u_time = datetime.timedelta(0), parent_id = None):
+def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent_id = None):
 # not sure how many parameters you need
 # potential SQL injection
         with con:
                 cur.execute(f"""INSERT INTO {table} VALUES 
                         (NULL, ?, ?, ?, '[]', ?,'[]', '[]', 'False')""",
-                        (name, duration, repr(u_time), parent_id)
+                        (name, repr(duration), repr(u_time), parent_id)
                 )
                 con.commit()
 
@@ -206,7 +206,7 @@ table = "Tasks"
 # add_checkpoint(table, 1, 
 # 'buy a milk')
 
-show_table("Tasks")
+# show_table("Tasks")
 
 # print(time(table, 5))
 # con.commit()

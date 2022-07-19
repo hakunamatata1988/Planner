@@ -1,4 +1,5 @@
 import interface2
+import tasks1
 import PySimpleGUI as sg
 import datetime
 import sqlite3
@@ -39,7 +40,7 @@ def tasks_layout(tasks_lst):
     return layout
 
 
-def add_task(cur):
+def add_task(cur,table):
     ''' The function that is starting when pressing add button on current tasks tab. The function is returning raw, an object that you should extend the layout of current tasks tab. It also update the database 
     '''
     h = 60
@@ -47,8 +48,11 @@ def add_task(cur):
     r = 2
     s = 10
     multiline_high = 5
+
+    # some starting values:
     
-    checkpoints = []
+    parent_id = None
+    checkpoints_str = ''
 
     Data = [
             [
@@ -73,9 +77,11 @@ def add_task(cur):
             [sg.Text('Parent',size = (h//3-r,v)), sg.Text('None', key = "Parent",size = (h//3-r,v)), sg.Stretch(), sg.Button('Select parent', key = 'Select parent')],
             # pop up with db table
 
-            [sg.Text('Checkpoints',size = (h//3-r,v)),sg.Text(str(checkpoints), key = 'Checkpoints',size = (h//3-r,v)), sg.Stretch(), sg.Button('Edit checkpoints', key = 'Edit checkpoints' )],
+            [sg.Text('Checkpoints',size = (h//3-r,v)),sg.Multiline(checkpoints_str, key = 'Checkpoints',size = (h-2,4)),],
+
+            # you removed  sg.Stretch(), sg.Button('Edit checkpoints', key = 'Edit checkpoints' )
         
-           [sg.Text('Notes', size = (h//3-r,v)), sg.Multiline(key = '-NOTES-',size = (h,5))] 
+           [sg.Text('Notes', size = (h//3-r,v)), sg.Multiline(key = '-NOTES-',size = (h-2,4))] 
         
     ]
     
@@ -90,33 +96,46 @@ def add_task(cur):
             break
 
         if event == 'Select parent':
-            parent_id, parent_name = id_name_from_db(cur)
-            window_add_tasks['Parent'].update(f'Id: {parent_id} Name: {parent_name}')
+            if id_name_from_db(cur) != None:
+                parent_id, parent_name = id_name_from_db(cur)
+                window_add_tasks['Parent'].update(f'Id: {parent_id} Name: {parent_name}')
 
 
 
-        if event == 'Edit checkpoints':
-            checkpoints = edit_checkpoints(checkpoints)
-            window_add_tasks['Checkpoints'].update(str(checkpoints))
+        # if event == 'Edit checkpoints':
+        #     checkpoints = edit_checkpoints(checkpoints)
+        #     window_add_tasks['Checkpoints'].update('\n'.join(checkpoints))
 
             
         if event == "-ADD-":
-            duration = datetime.timedelta(hours = values['-DURATIONh-'], minutes = values['-DURATIONm-'], seconds = values['-DURATIONs-'])
             
-            time = datetime.timedelta(hours = values['-TIMEh-'], minutes = values['-TIMEm-'], seconds = values['-TIMEs-'])
+            h = int(values['-DURATIONh-']) if is_number(values['-DURATIONh-']) else 0
+            m = int(values['-DURATIONm-']) if is_number(values['-DURATIONm-']) else 0
+            s = int(values['-DURATIONs-']) if is_number(values['-DURATIONs-']) else 0
+            duration = datetime.timedelta(hours = h, minutes = m, seconds = s)
 
+            h = int(values['-TIMEh-']) if is_number(values['-TIMEh-']) else 0
+            m = int(values['-TIMEm-']) if is_number(values['-TIMEm-']) else 0
+            s = int(values['-TIMEs-']) if is_number(values['-TIMEs-']) else 0
+            
+            u_time = datetime.timedelta(hours = h, minutes = m, seconds = s)
+
+            tasks1.insert(table, values['name'], duration = duration, u_time = u_time, parent_id = parent_id)
             # task = Task(values['-TASK-'], duration,time, values['-NOTES-'])
-            # database update and get task id
+            # database update and return task id and other necesery values
 
-            task_id = None
+            task_id = cur.lastrowid
+            cur.commit()
+            add = True
             break 
-
-    task_id = None
-    raw = [task_layout(task_id)]
 
     window_add_tasks.close()
 
-    return raw
+    if add:
+        raw = [task_layout(task_id)]
+        return raw, task_id
+
+    return 
 
 def id_name_from_db(cur):
     t, lst = interface2.create_sq_table(interface2.tasks1.cur)
@@ -133,11 +152,13 @@ def id_name_from_db(cur):
             break
 
 
-        if event == sg.WIN_CLOSED:             
+        if event == sg.WIN_CLOSED:   
+            cancel = True          
             break  
 
     window.close()
-    return id,name
+    if not cancel:
+        return id,name
 
 def edit_checkpoints(checkpoints):
     column = [[sg.Button('Up    ')],[sg.Button('Down')]]
@@ -182,13 +203,23 @@ def read_value(title, value = ''):
 
     return event, values
 
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+    except TypeError:
+        return False
 
 
 
 
 con = sqlite3.connect('data.db')
+cur = con.cursor()
 
-add_task(con)
+add_task(cur,'Tasks')
+
 # edit_checkpoints(['do this', 'remember this'])
 # print(read_value('miki','some values'))
 
