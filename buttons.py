@@ -7,6 +7,10 @@ import sqlite3
 
 
 def task_layout(task_id = None):
+    ''' Returns a layout for a single task. Tasks are from table Tasks.
+    '''
+
+    # No checkpoints for now
 
     Tasks_options = [
         sg.Button('|>', key = "START-" + str(task_id)),
@@ -17,12 +21,19 @@ def task_layout(task_id = None):
         sg.Button('Remove', key = "REMOVE-" + str(task_id))
         ]
 
+    # You need to take this data from database
     if task_id is None:
         total_time = datetime.timedelta(0)
-        task_duration = 0
+        task_duration = datetime.timedelta(0)
         name = 'Test'
+    else:
+        task = tasks1.get_row('Tasks',task_id)
+        total_time = datetime.timedelta(0)
+        task_duration = eval(task['duration'])
+        name = task['name']
 
-    Tasks_progress = [sg.ProgressBar(task_duration , size = (10,20), expand_x = True, key = "PROGRESS-" + str(task_id))]
+
+    Tasks_progress = [sg.ProgressBar(task_duration.total_seconds() , size = (10,20), expand_x = True, key = "PROGRESS-" + str(task_id))]
 
     Task_time = [sg.Text(str(total_time).split(".")[0], key = "TIME-" + str(task_id))]
     
@@ -30,29 +41,30 @@ def task_layout(task_id = None):
 
     return raw
 
-def tasks_layout(tasks_lst):
+def tasks_layout(id_lst):
+    '''Returns a layout for all tasks form list od id'''
     
     layout = [[]]
     
-    for i,task in enumerate(tasks_lst):
+    for i,task in enumerate(id_lst):
         layout.append(task_layout(task))
 
     return layout
 
 
-def add_task(cur,table):
-    ''' The function that is starting when pressing add button on current tasks tab. The function is returning raw, an object that you should extend the layout of current tasks tab. It also update the database 
+def add_task(con,table):
+    ''' The function that is starting when pressing add button on current tasks tab. The function is returning raw and task_id. It also update the con.
     '''
     h = 60
     v = 1
     r = 2
     s = 10
-    multiline_high = 5
 
     # some starting values:
     
     parent_id = None
     checkpoints_str = ''
+    cur = con.cursor()
 
     Data = [
             [
@@ -88,6 +100,8 @@ def add_task(cur,table):
     layout = [[Data,sg.Button("Add", key = "-ADD-")]]
     
     window_add_tasks = sg.Window("Add task",layout)
+
+    add = False
     
     while True:
         event, values = window_add_tasks.read()
@@ -96,8 +110,9 @@ def add_task(cur,table):
             break
 
         if event == 'Select parent':
-            if id_name_from_db(cur) != None:
-                parent_id, parent_name = id_name_from_db(cur)
+            temp = id_name_from_db(cur)
+            if temp != None:
+                parent_id, parent_name = temp
                 window_add_tasks['Parent'].update(f'Id: {parent_id} Name: {parent_name}')
 
 
@@ -120,16 +135,19 @@ def add_task(cur,table):
             
             u_time = datetime.timedelta(hours = h, minutes = m, seconds = s)
 
-            tasks1.insert(table, values['name'], duration = duration, u_time = u_time, parent_id = parent_id)
-            # task = Task(values['-TASK-'], duration,time, values['-NOTES-'])
-            # database update and return task id and other necesery values
+            task_id = tasks1.insert(table, values['name'], duration = duration, u_time = u_time, parent_id = parent_id)
 
-            task_id = cur.lastrowid
-            cur.commit()
+            # cur.execute('SELECT * FROM Tasks')
+
+            # task_id = con.lastrowid
+            # print(task_id)
+            con.commit()
             add = True
+
             break 
 
     window_add_tasks.close()
+    
 
     if add:
         raw = [task_layout(task_id)]
@@ -138,9 +156,14 @@ def add_task(cur,table):
     return 
 
 def id_name_from_db(cur):
+    '''Returns id,name from coursor cur that you selected from database table.'''
+
+
     t, lst = interface2.create_sq_table(interface2.tasks1.cur)
 
     window = sg.Window('Database', layout =[[t],[sg.Button("Choose", key = "Choose")]], default_element_size=(12,1))
+
+    cancel = False
 
     while True:    
 
@@ -161,6 +184,8 @@ def id_name_from_db(cur):
         return id,name
 
 def edit_checkpoints(checkpoints):
+    '''I dont think that is usefull. You decided to write checkpoints in multline elements.'''
+
     column = [[sg.Button('Up    ')],[sg.Button('Down')]]
     layout = [[sg.Listbox(checkpoints,s = (30,10), key = 'checkpoints'), sg.Column(column)], 
     [sg.Button('Add'),sg.Button('Remove'), sg.B("Save",key = 'Save')]]
@@ -194,6 +219,7 @@ def edit_checkpoints(checkpoints):
     return checkpoints
 
 def read_value(title, value = ''):
+    '''Small popup to write a value'''
     layout = [[sg.Input(value, key = 'Input')], [sg.Submit('Save'), sg.Cancel('Cancel')]]
      
     window = sg.Window(title, layout)    
@@ -215,13 +241,12 @@ def is_number(s):
 
 
 
-con = sqlite3.connect('data.db')
-cur = con.cursor()
+# con = sqlite3.connect('data.db')
 
-add_task(cur,'Tasks')
+# add_task(con,'Tasks')
 
 # edit_checkpoints(['do this', 'remember this'])
 # print(read_value('miki','some values'))
 
-con.close()
+# con.close()
         

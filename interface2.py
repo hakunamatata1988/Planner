@@ -20,6 +20,7 @@ def create_sq_table(cur):
 
         subtasks = []
         for id_s in eval(raw['subtasks_id']):
+            # print(id_s)
             subtasks.append(tasks1.get_row(tasks1.table, id_s)['name'])
 
         subtasks = ', '.join(subtasks)

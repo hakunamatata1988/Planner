@@ -27,6 +27,9 @@ def create_table(name):
 
 
 def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent_id = None):
+        '''insert a recor to db,  retuns id of the inserted record'''
+
+# connection is set globally
 # not sure how many parameters you need
 # potential SQL injection
         with con:
@@ -38,6 +41,8 @@ def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = da
 
                 if parent_id is not None:
                         add_subtask(table, parent_id, cur.lastrowid)
+
+                return cur.lastrowid
 
 def delete(table, id ):
 # not sure how many parameters you need
@@ -53,6 +58,7 @@ def delete_table(table):
 
 
 def get_row(table,id):
+        # print('Table = ', repr(table), ',id = ', repr(id))
         with con:
                 cur.execute(f"SELECT * FROM {table} WHERE id = ?", (id,))
                 return cur.fetchone()
@@ -179,7 +185,6 @@ def add_checkpoint(table, id, description):
         with con:
                 task = get_row(table,id)
                 checkpoint_lst = eval(task['checkpoints'])+[[description,False]]
-                print(repr(checkpoint_lst))
                 cur.execute(f"UPDATE {table} SET checkpoints = ? WHERE id = {id}", (repr(checkpoint_lst),))
 
 
@@ -187,17 +192,17 @@ def add_checkpoint(table, id, description):
 
 # Uncomment to test
 
-# delete_table("Tasks")
-# create_table("Tasks")
+delete_table("Tasks")
+create_table("Tasks")
 
-# insert("Tasks","new task1")
-# insert("Tasks","new task2", parent_id =1)
-# insert("Tasks","new task3", parent_id =1)
-# insert("Tasks","new task4", parent_id =2)
-# insert("Tasks","new task5")
-# insert("Tasks","new task6", parent_id =5)
-# insert("Tasks","new task7", parent_id =5)
-# insert("Tasks","new task8", parent_id =7)
+insert("Tasks","new task1")
+insert("Tasks","new task2", parent_id =1)
+insert("Tasks","new task3", parent_id =1)
+insert("Tasks","new task4", parent_id =2)
+insert("Tasks","new task5")
+insert("Tasks","new task6", parent_id =5)
+insert("Tasks","new task7", parent_id =5)
+insert("Tasks","new task8", parent_id =7)
 
 table = "Tasks"
 
