@@ -15,15 +15,27 @@ def create_table(name):
                 cur.execute(""" CREATE TABLE {} (
                         id INTEGER PRIMARY KEY,
                         name TEXT,
+                        active TEXT,
                         duration TEXT,
                         u_time TEXT,
                         subtasks_id  TEXT,
                         parent_id INTEGER,
                         time_history TEXT,
-                        checkpoints TEXT,
-                        active TEXT
+                        checkpoints TEXT
                 )      
                 """.format(name))
+
+
+def create_table_curent():
+        with con:
+                cur.execute(""" CREATE TABLE Curent (
+                        id INTEGER PRIMARY KEY,
+                        name TEXT,
+                        time_history TEXT,
+                        u_time TEXT,
+                        duration TEXT,
+                        active TEXT
+                )""")
 
 
 def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent_id = None):
@@ -34,7 +46,7 @@ def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = da
 # potential SQL injection
         with con:
                 cur.execute(f"""INSERT INTO {table} VALUES 
-                        (NULL, ?, ?, ?, '[]', ?,'[]', '[]', 'False')""",
+                        (NULL, ?, 'False' , ?, ?, '[]', ?,'[]', '[]')""",
                         (name, repr(duration), repr(u_time), parent_id)
                 )
                 con.commit()
@@ -43,6 +55,23 @@ def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = da
                         add_subtask(table, parent_id, cur.lastrowid)
 
                 return cur.lastrowid
+
+def insert_to_curent(id, u_time = datetime.timedelta(0)):
+        # should be already in Tasks
+        # u_time not implemented correctly yet
+
+        with con:
+                cur.execute(f"SELECT * FROM Tasks  WHERE id = ?", (id,))
+                task = cur.fetchone()
+
+                name = task['name']
+                duration = task['duration']
+
+                cur.execute(f"""INSERT INTO Curent VALUES 
+                        (?,?,'[]', ?, ?, 'False')""",
+                        (id, name, repr(u_time), duration)
+                )
+
 
 def delete(table, id ):
 # not sure how many parameters you need
@@ -77,7 +106,11 @@ def add_subtask(table, id, subtask_id):
 
 def show_table(table):
         with con:
-                print('(id, name, duration, u_time, subtasks_id, parent_id, time_history, checkpoints, active)')
+                cur.execute(f'PRAGMA table_info({table})')
+                desc = cur.fetchall()
+                names = [fields[1] for fields in desc]
+                print(names)
+
                 for row in cur.execute(f"SELECT * FROM {table}"):
                         print(tuple(row))
 
@@ -93,7 +126,7 @@ def get_parents(table,id):
                 return [id_parent] + get_parents(table,id_parent)
 
 
-def activate(table, id):
+def activate(table, id, parents = True):
         with con:
                 task = get_row(table,id)
                 # print('parents =', get_parents(table,id))
@@ -105,12 +138,15 @@ def activate(table, id):
                 cur.execute(f"UPDATE {table} SET time_history = '{repr(new)}', active = 'True' WHERE id = {id}")
 
                 # update state of parents
-                for id_p in get_parents(table,id):
-                        parent = get_row(table,id_p)
-                        if parent['active'] == "True":
-                                return # older parents should be active
-                        new = eval(parent['time_history'])+[[now]]
-                        cur.execute(f"UPDATE {table} SET time_history = '{repr(new)}', active = 'True' WHERE id = {id_p}")
+                if parents:
+                        for id_p in get_parents(table,id):
+                                parent = get_row(table,id_p)
+                                if parent['active'] == "True":
+                                        return # older parents should be active
+                                new = eval(parent['time_history'])+[[now]]
+                                cur.execute(f"UPDATE {table} SET time_history = '{repr(new)}', active = 'True' WHERE id = {id_p}")
+
+
 
 def get_childs(table,id):
         # Returns the list of ids of all childes (all generations)
@@ -125,7 +161,7 @@ def get_childs(table,id):
 
                 return lst_id
         
-def deactivate(table, id):
+def deactivate(table, id, family = True):
         with con:
                 task = get_row(table,id)
                 if task['active'] == "False":
@@ -135,7 +171,10 @@ def deactivate(table, id):
                 lst = eval(task['time_history'])
                 lst[-1].append(now)
 
-                cur.execute(f"UPDATE {table} SET time_history = '{repr(lst)}', active = 'False' WHERE id = {id}")      
+                cur.execute(f"UPDATE {table} SET time_history = '{repr(lst)}', active = 'False' WHERE id = {id}")
+
+                if not family:
+                        return
 
                 # update state of parents, can be optimize (order?)
                 for id_p in get_parents(table,id):
@@ -194,6 +233,9 @@ def add_checkpoint(table, id, description):
 
 delete_table("Tasks")
 create_table("Tasks")
+delete_table("Curent")
+create_table_curent()
+
 
 insert("Tasks","new task1")
 insert("Tasks","new task2", parent_id =1)
@@ -204,7 +246,16 @@ insert("Tasks","new task6", parent_id =5)
 insert("Tasks","new task7", parent_id =5)
 insert("Tasks","new task8", parent_id =7)
 
+# insert_to_curent(1)
+# insert_to_curent(7)
+# insert_to_curent(2)
+# insert_to_curent(3)
+
 table = "Tasks"
+
+# activate('Curent',1, parents = False)
+# deactivate('Curent',1,family = False)
+
 
 # activate(table, 5)
 # deactivate(table,5)
@@ -212,7 +263,9 @@ table = "Tasks"
 # 'buy a milk')
 
 # show_table("Tasks")
+# show_table('Curent')
 
+# print('time 1 = ',time('Curent', 1))
 # print(time(table, 5))
 # con.commit()
 

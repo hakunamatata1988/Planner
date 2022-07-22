@@ -37,7 +37,7 @@ def task_layout(task_id = None):
 
     Task_time = [sg.Text(str(total_time).split(".")[0], key = "TIME-" + str(task_id))]
     
-    raw =  [sg.Checkbox('', key = 'CHECKBOX-' + str(task_id), enable_events= True)] + [sg.Text(name , key = 'TASK NAME-' + str(task_id))] + Tasks_options + Tasks_progress + Task_time
+    raw =  [sg.Checkbox('', key = 'CHECKBOX-' + str(task_id), enable_events= True)] + [sg.Text(name , key = 'TASK NAME-' + str(task_id), size = (12,1))] + Tasks_options + Tasks_progress + Task_time
 
     return raw
 
@@ -73,7 +73,7 @@ def add_task(con,table):
             ],
                
            [
-            sg.Text('Duration',size = (h//3-r,v)),
+            sg.Text('Duration of a session',size = (h//3-r,v)),
             sg.Input('hours',key = '-DURATIONh-',size = (h//3-r,v)),
             sg.Input('minutes',key = '-DURATIONm-',size = (h//3-r,v)),
             sg.Input('seconds',key = '-DURATIONs-',size = (h//3-r,v))
@@ -154,6 +154,11 @@ def add_task(con,table):
         return raw, task_id
 
     return 
+
+def show_in_curent(id):
+    pass
+    
+
 
 def id_name_from_db(cur):
     '''Returns id,name from coursor cur that you selected from database table.'''
