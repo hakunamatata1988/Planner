@@ -21,7 +21,8 @@ def create_table(name):
                         subtasks_id  TEXT,
                         parent_id INTEGER,
                         time_history TEXT,
-                        checkpoints TEXT
+                        checkpoints TEXT,
+                        notes TEXT
                 )      
                 """.format(name))
 
@@ -38,7 +39,7 @@ def create_table_curent():
                 )""")
 
 
-def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent_id = None):
+def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent_id = None, checkpoints = '', notes = ''):
         '''insert a recor to db,  retuns id of the inserted record'''
 
 # connection is set globally
@@ -46,8 +47,8 @@ def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = da
 # potential SQL injection
         with con:
                 cur.execute(f"""INSERT INTO {table} VALUES 
-                        (NULL, ?, 'False' , ?, ?, '[]', ?,'[]', '[]')""",
-                        (name, repr(duration), repr(u_time), parent_id)
+                        (NULL, ?, 'False' , ?, ?, '[]', ?,'[]', ?, ?)""",
+                        (name, repr(duration), repr(u_time), parent_id, checkpoints, notes)
                 )
                 con.commit()
 

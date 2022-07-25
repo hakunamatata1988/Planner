@@ -135,7 +135,7 @@ def add_task(con,table):
             
             u_time = datetime.timedelta(hours = h, minutes = m, seconds = s)
 
-            task_id = tasks1.insert(table, values['name'], duration = duration, u_time = u_time, parent_id = parent_id)
+            task_id = tasks1.insert(table, values['name'], duration = duration, u_time = u_time, parent_id = parent_id, checkpoints = values['Checkpoints'], notes = values['-NOTES-'])
 
             # cur.execute('SELECT * FROM Tasks')
 
@@ -155,8 +155,126 @@ def add_task(con,table):
 
     return 
 
-def show_in_curent(id):
-    pass
+def edit_task(con, table, id):
+    ''' The function that is starting when pressing Edit button. Itchanges the data of task and update layout and database.
+    '''
+    h = 60
+    v = 1
+    r = 2
+    s = 10
+
+    task = tasks1.get_row('Tasks',id)
+    
+    if task['parent_id'] is not None:
+        parent_id = int(task['parent_id'])
+        parent_name = tasks1.get_row('Tasks',parent_id)['name']
+        parent_string = f'Id: {parent_id} Name: {parent_name}'
+    else:
+        parent_id = None
+        parent_name = str(None)
+        parent_string = str(None)
+    checkpoints_str = task['checkpoints']
+
+    td = eval(task['duration'])
+
+    d_hours = int(td.total_seconds()// 3600)
+    _, remainder = divmod(td.seconds, 3600)
+    d_minutes, d_seconds = divmod(remainder, 60)
+
+
+    cur = con.cursor()
+
+    Data = [
+            [
+            sg.Text('Task ', size = (h//3-r,v)), 
+            sg.Input(task['name'],key = 'name',size = (h,v))
+            ],
+               
+           [
+            sg.Text('Duration of a session',size = (h//3-r,v)),
+            sg.Input(str(d_hours),key = '-DURATIONh-',size = (h//3-r,v)),
+            sg.Input(str(d_minutes),key = '-DURATIONm-',size = (h//3-r,v)),
+            sg.Input(str(d_seconds),key = '-DURATIONs-',size = (h//3-r,v))
+           ], 
+        
+            [
+            sg.Text('Untruck Time',size = (h//3-r,v)),
+            sg.Input('hours',key = '-TIMEh-',size = (h//3-r,v)),
+            sg.Input('minutes',key = '-TIMEm-',size = (h//3-r,v)),
+            sg.Input('seconds',key = '-TIMEs-',size = (h//3-r,v))  
+            ],
+
+            [sg.Text('Parent',size = (h//3-r,v)), sg.Text(parent_string, key = "Parent",size = (h//3-r,v)), sg.Stretch(), sg.Button('Select parent', key = 'Select parent')],
+            # pop up with db table
+
+            [sg.Text('Checkpoints',size = (h//3-r,v)),sg.Multiline(checkpoints_str, key = 'Checkpoints',size = (h-2,4)),],
+
+            # you removed  sg.Stretch(), sg.Button('Edit checkpoints', key = 'Edit checkpoints' )
+        
+           [sg.Text('Notes', size = (h//3-r,v)), sg.Multiline(task['NOTES'], key = '-NOTES-',size = (h-2,4))] 
+        
+    ]
+    
+    layout = [[Data,sg.Button("Save", key = "-SAVE-")]]
+    
+    window_add_tasks = sg.Window("Add task",layout)
+
+    add = False
+    
+    while True:
+        event, values = window_add_tasks.read()
+
+        if event == sg.WIN_CLOSED:
+            break
+
+        if event == 'Select parent':
+            temp = id_name_from_db(cur)
+            if temp != None:
+                parent_id, parent_name = temp
+                window_add_tasks['Parent'].update(f'Id: {parent_id} Name: {parent_name}')
+
+
+
+        # if event == 'Edit checkpoints':
+        #     checkpoints = edit_checkpoints(checkpoints)
+        #     window_add_tasks['Checkpoints'].update('\n'.join(checkpoints))
+
+            
+        if event == "-SAVE-":
+            
+            h = int(values['-DURATIONh-']) if is_number(values['-DURATIONh-']) else 0
+            m = int(values['-DURATIONm-']) if is_number(values['-DURATIONm-']) else 0
+            s = int(values['-DURATIONs-']) if is_number(values['-DURATIONs-']) else 0
+            duration = datetime.timedelta(hours = h, minutes = m, seconds = s)
+
+            h = int(values['-TIMEh-']) if is_number(values['-TIMEh-']) else 0
+            m = int(values['-TIMEm-']) if is_number(values['-TIMEm-']) else 0
+            s = int(values['-TIMEs-']) if is_number(values['-TIMEs-']) else 0
+            
+            u_time = datetime.timedelta(hours = h, minutes = m, seconds = s)
+
+            sql = f'''UPDATE {table}
+                    SET name = ?,
+                        duration = ?,
+                        u_time = ?,
+                        parent_id = ?,
+                        checkpoints = ?,
+                        notes = ?
+                    WHERE id = ? '''
+            
+            
+
+            cur.execute(sql,(values['name'], repr(duration), repr(u_time),  parent_id, values['Checkpoints'], values['-NOTES-'],id))
+            con.commit()
+
+            break 
+
+    window_add_tasks.close()
+    
+
+
+
+    return 
     
 
 
