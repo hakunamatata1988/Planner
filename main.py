@@ -45,7 +45,14 @@ while True:
 
     event, values = window.read(timeout = 20)    
     # print(event,values)  
-    if event == sg.WIN_CLOSED:             
+    if event == sg.WIN_CLOSED: 
+        # Saving progress of curent active tasks
+        for task in lst:
+            id = int(task[0])
+            tasks1.deactivate('Curent',id, family = False)
+            tasks1.deactivate('Tasks',id)
+
+        con.commit()  
         break  
 
     if event[0] == 'Tab' :
@@ -74,33 +81,7 @@ while True:
 
 
     if event == "-ADD TASK-":
-        # check if the user exited
-        temp = buttons.add_task(con,'Tasks')
-        if temp is None:
-            continue
-
-        row,task_id = temp
-
-        # check if somebody from family is in curent
-        lst_of_parent = tasks1.get_parents('Tasks',task_id)
-
-
-        sql = 'SELECT * FROM Curent WHERE id IN ({0})'.format(', '.join('?' for _ in lst_of_parent))
-        tasks1.cur.execute(sql, tuple(lst_of_parent))
-
-        colision = tasks1.cur.fetchall()
-
-        if colision:
-            family_members = [row['name'] for row in colision]
-            sg.Popup(f'There is a task ({ ",".join(family_members) }) from parents in curent. Task was add to database.')
-            continue
-
-        window.extend_layout(window["Today tasks"], row)
-
-        _, lst = interface2.create_sq_table(interface2.tasks1.cur)
-        window['Tab'].update(values = lst)
-        # starting_tasks refresh
-        tasks1.insert_to_curent(task_id)
+        buttons.add_task_button(con,window)
 
     if event == "Add to current":
         # get id of selected row or do nothing if nothing is selected
@@ -115,7 +96,7 @@ while True:
         lst_of_childs = tasks1.get_childs('Tasks',selected_id)
         family = lst_of_parent + lst_of_childs + [selected_id]
 
-        sql = 'SELECT * FROM Curent WHERE id IN ({0})'.format(', '.join('?' for _ in family))
+        sql = 'SELECT * FROM Curent WHERE id_tasks IN ({0})'.format(', '.join('?' for _ in family))
         tasks1.cur.execute(sql, tuple(family))
 
         colision = tasks1.cur.fetchall()
@@ -124,19 +105,15 @@ while True:
             family_members = [row['name'] for row in colision]
             sg.Popup(f'There is a task ({ ",".join(family_members) }) from family in curent.')
 
+        # need to update some object that truck what is in current
+        id_in_cur = tasks1.insert_to_curent(selected_id)
 
         # create a layout
-        row = [buttons.task_layout(selected_id)]
+        row = [buttons.task_layout(id_in_cur)]
 
         # extend the window['Today tasks']
         window.extend_layout(window["Today tasks"], row)
 
-        # not sure what you want to do if task is already in current
-
-        # need to update some object that truck what is in current
-        tasks1.insert_to_curent(selected_id)
-
-    
     if event == "Add to db":
         # check if the user exited
         temp = buttons.add_task(con,'Tasks')
@@ -182,13 +159,16 @@ while True:
 
     if isinstance(event,str) and event.split('-')[0] == "START":
         id = int(event.split('-')[1])
+        sql = 'SELECT * FROM Curent WHERE id = ?'
+        tasks1.cur.execute(sql, (id,))
+        id_tasks = tasks1.cur.fetchone()['id_tasks']
 
-        #checking if sb from family is active
-        lst_of_parent = tasks1.get_parents('Tasks',id)
-        lst_of_childs = tasks1.get_childs('Tasks',id)
-        family = lst_of_parent + lst_of_childs + [id]
+        # checking if sb from family is active
+        lst_of_parent = tasks1.get_parents('Tasks',id_tasks)
+        lst_of_childs = tasks1.get_childs('Tasks',id_tasks)
+        family = lst_of_parent + lst_of_childs + [id_tasks]
 
-        sql = 'SELECT * FROM Curent WHERE id IN ({0}) AND active = "True"'.format(', '.join('?' for _ in family))
+        sql = 'SELECT * FROM Tasks WHERE id IN ({0}) AND active = "True"'.format(', '.join('?' for _ in family))
         tasks1.cur.execute(sql, tuple(family))
 
         colision = tasks1.cur.fetchall()
@@ -199,13 +179,17 @@ while True:
             continue
 
         tasks1.activate('Curent',id, parents = False)
-        tasks1.activate('Tasks',id)
+        tasks1.activate('Tasks',id_tasks)
 
 
     if isinstance(event,str) and event.split('-')[0] == "PAUSE":
         id = int(event.split('-')[1])
-        tasks1.deactivate('Curent',id, family = False)
-        tasks1.deactivate('Tasks',id)
+        id_task = tasks1.get_row('Curent',id)['id_tasks']
+
+        # id = tasks1.get_row('Curent',id)
+
+        tasks1.deactivate('Curent', id, family = False)
+        tasks1.deactivate('Tasks', id_task)
 
 
     if event == '-CLEAR-':
@@ -218,11 +202,14 @@ while True:
 
     tasks1.cur.execute("Select * FROM Curent WHERE active = 'True'",)
     for task in tasks1.cur.fetchall():
-        id_task = int(task['id'])
-        t = tasks1.time('Curent',id_task)
+        # from id in current to id in tasks
+        id_curent = int(task['id'])
+        id_task = int(task['id_tasks'])
+
+        t = tasks1.time('Curent', id_curent)
         d = eval(task['duration']).total_seconds()
-        window['TIME-' + str(id_task)].update(str(t).split('.')[0])
-        window['PROGRESS-'+str(id_task)].update(current_count = t.total_seconds(), max=d)
+        window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
+        window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
 
     
     if event == 'Tab group':
@@ -231,8 +218,22 @@ while True:
 
     if isinstance(event,str) and event.split('-')[0] == "EDIT":
         id = int(event.split('-')[1])
-        buttons.edit_task(con, 'Tasks', id)
+        sql = 'SELECT * FROM Curent WHERE id = ?'
+        tasks1.cur.execute(sql, (id,))
+        task =  tasks1.cur.fetchone()
+        id_tasks = task['id_tasks']
 
+
+        buttons.edit_task(con, 'Tasks', id_tasks, id)
+        tasks1.cur.execute(sql, (id,))
+        task =  tasks1.cur.fetchone()
+        # name update
+        window['TASK NAME-' + str(id)].update(task['name'])
+        # progresbarr update
+        t = tasks1.time('Curent', id)
+        d = eval(task['duration']).total_seconds()
+        window['TIME-' + str(id)].update(str(t).split('.')[0])
+        window['PROGRESS-' + str(id)].update(current_count = t.total_seconds(), max=d)
 
 
 

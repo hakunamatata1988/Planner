@@ -31,6 +31,7 @@ def create_table_curent():
         with con:
                 cur.execute(""" CREATE TABLE Curent (
                         id INTEGER PRIMARY KEY,
+                        id_tasks INTEGER,
                         name TEXT,
                         time_history TEXT,
                         u_time TEXT,
@@ -57,21 +58,24 @@ def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = da
 
                 return cur.lastrowid
 
-def insert_to_curent(id, u_time = datetime.timedelta(0)):
+def insert_to_curent(id_tasks, u_time = datetime.timedelta(0)):
         # should be already in Tasks
         # u_time not implemented correctly yet
 
         with con:
-                cur.execute(f"SELECT * FROM Tasks  WHERE id = ?", (id,))
+                cur.execute(f"SELECT * FROM Tasks  WHERE id = ?", (id_tasks,))
                 task = cur.fetchone()
 
                 name = task['name']
                 duration = task['duration']
 
                 cur.execute(f"""INSERT INTO Curent VALUES 
-                        (?,?,'[]', ?, ?, 'False')""",
-                        (id, name, repr(u_time), duration)
+                        (NULL, ?, ?, '[]', ?, ?, 'False')""",
+                        (id_tasks, name, repr(u_time), duration)
                 )
+
+                return cur.lastrowid
+                
 
 
 def delete(table, id ):
@@ -88,10 +92,11 @@ def delete_table(table):
 
 
 def get_row(table,id):
-        # print('Table = ', repr(table), ',id = ', repr(id))
+
         with con:
                 cur.execute(f"SELECT * FROM {table} WHERE id = ?", (id,))
                 return cur.fetchone()
+
 
 def add_subtask(table, id, subtask_id):
         # no checking for loops yet
@@ -116,10 +121,15 @@ def show_table(table):
                         print(tuple(row))
 
 def get_parents(table,id):
+        '''
+        id should be from Tasks.
+        table should be Tasks.
+        '''
         # Returns list of all parents id (all generations)
         # Order from the closest
 
         task = get_row(table,id)
+        print(task)
         if task['parent_id'] is None:
                 return []
         else:
@@ -128,6 +138,10 @@ def get_parents(table,id):
 
 
 def activate(table, id, parents = True):
+        '''
+        id should be from Tasks.
+        table should be Tasks.
+        '''
         with con:
                 task = get_row(table,id)
                 # print('parents =', get_parents(table,id))
@@ -150,7 +164,10 @@ def activate(table, id, parents = True):
 
 
 def get_childs(table,id):
-        # Returns the list of ids of all childes (all generations)
+        '''Returns the list of ids of all childes (all generations)
+        id should be from Tasks.
+        table should be Tasks.
+        '''
 
         task = get_row(table,id)
         if task['subtasks_id'] == '[]':
@@ -163,6 +180,10 @@ def get_childs(table,id):
                 return lst_id
         
 def deactivate(table, id, family = True):
+        '''
+        id should be from Tasks.
+        table should be Tasks.
+        ''' 
         with con:
                 task = get_row(table,id)
                 if task['active'] == "False":
@@ -202,6 +223,9 @@ def deactivate(table, id, family = True):
                         cur.execute(f"UPDATE {table} SET time_history = '{repr(lst)}', active = 'False' WHERE id = {id_c}")                         
 
 def time(table, id):
+        '''
+        May work for both tables.
+        '''
         with con:
                 task = get_row(table,id)
                 time_lst = eval(task['time_history'])
