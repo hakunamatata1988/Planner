@@ -4,32 +4,47 @@ import buttons
 import sqlite3
 import tasks1
 import datetime
+# think if your imports are optimal, any circular imports?
+
+# change lst to window['Tab'] ???
 
 
-starting_tasks = []
+starting_tasks = [] # should be loaded from curent
+
 bcolor = sg.theme_background_color()
 tcolor = sg.theme_text_color()
 
-con = sqlite3.connect('data.db')
+file = 'data.db'
+con = sqlite3.connect(file) # file should be chosen by user, note that you are using one conection
+# conection and cursor probably should be in the same file
 
+# Curent tab layout
 tab1_layout = [
-        [sg.Frame("Tasks", key = "Today tasks",layout = buttons.tasks_layout(starting_tasks),   )],
+        [sg.Frame("Tasks", key = "Today tasks", layout = buttons.tasks_layout(starting_tasks))],
         [sg.VStretch()],
-        [sg.Button("Add task", key = "-ADD TASK-"),sg.Button("Clear", key = "-CLEAR-"),sg.Button("Day", key = "-DAY-"), sg.Stretch(), sg.Text(key = "INFO", justification= "right")]
+        [
+            sg.Button("Add task", key = "-ADD TASK-"),
+            sg.Button("Clear", key = "-CLEAR-"),
+            sg.Button("Day", key = "-DAY-"), 
+            sg.Stretch(), 
+            sg.Text(key = "INFO", justification= "right")
+            ]
     ]
 
+# Database tab layout
 t,lst = interface2.create_sq_table(interface2.tasks1.cur)
 
 tab2_layout= [
     [t, sg.Multiline("Just some description of the task",key = "description", expand_y = True, background_color = bcolor, text_color = tcolor)],
-    [sg.Button("Add to db", key = "Add to db"),
-    sg.Button("Remove from db", key = "Remove from db"),
-    sg.Button("Add to current", key = "Add to current")]
+    [
+        sg.Button("Add to db", key = "Add to db"),
+        sg.Button("Remove from db", key = "Remove from db"),
+        sg.Button("Add to current", key = "Add to current")
+        ]
     ]
 
 
-# note that this is loaded at the beginning, what if the data change?
-
+# Window layout
 layout = [[
     sg.TabGroup([[
         sg.Tab('Curent tasks', tab1_layout), 
@@ -37,48 +52,35 @@ layout = [[
         key = 'Tab group', enable_events= True)
     ]] 
 
-# tool tip -> podpowiedź
-
-window = sg.Window('My window with tabs', layout, default_element_size=(12,1), finalize = True, )    
+window = sg.Window('Tracker', layout, default_element_size=(12,1), finalize = True, )    
 
 while True:    
 
     event, values = window.read(timeout = 20)    
     # print(event,values)  
+
     if event == sg.WIN_CLOSED: 
         # Saving progress of curent active tasks
-        for task in lst:
-            id = int(task[0])
-            tasks1.deactivate('Curent',id, family = False)
-            tasks1.deactivate('Tasks',id)
+
+        tasks1.cur.execute("Select * FROM Curent WHERE active = 'True'",)
+        for task in tasks1.cur.fetchall():
+            # from id in current to id in tasks
+            id_curent = int(task['id'])
+            id_task = int(task['id_tasks'])
+
+            tasks1.deactivate('Curent', id_curent, family = False) # deactivate not wirking on curent?
+            tasks1.deactivate('Tasks', id_task)
 
         con.commit()  
         break  
 
-    if event[0] == 'Tab' :
-        pass
-        # print('events = ', event ,' values:', values)
+    if event[0] == 'Tab':
+        # getting id
         row = event[2][0]
         selected_id = lst[row][0]
-        selection = tasks1.get_row('Tasks', selected_id)
 
-        if selection['parent_id'] is None:
-            parent = 'None'
-        else:
-            parent = tasks1.get_row(tasks1.table, int(selection['parent_id']))['name']
-
-        subtasks = []
-        for id_s in eval(selection['subtasks_id']):
-            subtasks.append(tasks1.get_row(tasks1.table, id_s)['name'])
-
-        subtasks = ', '.join(subtasks)
-
-        string = f'''Name:\n{selection['name']}\n\nParent:\n{parent}\n\nSubtasks:\n{subtasks}\n\nCheckpoints:\n{selection['checkpoints']}\n\nNotes:\n{selection['notes']}       
+        buttons.description(selected_id, window)
         
-        '''
-        window['description'].update(string)
-        
-
 
     if event == "-ADD TASK-":
         buttons.add_task_button(con,window)
@@ -91,39 +93,24 @@ while True:
         [raw] = values['Tab']
         selected_id = lst[raw][0]
 
-        # check if somebody from family is in curent
-        lst_of_parent = tasks1.get_parents('Tasks',selected_id)
-        lst_of_childs = tasks1.get_childs('Tasks',selected_id)
-        family = lst_of_parent + lst_of_childs + [selected_id]
-
-        sql = 'SELECT * FROM Curent WHERE id_tasks IN ({0})'.format(', '.join('?' for _ in family))
-        tasks1.cur.execute(sql, tuple(family))
-
-        colision = tasks1.cur.fetchall()
-
-        if colision:
-            family_members = [row['name'] for row in colision]
-            sg.Popup(f'There is a task ({ ",".join(family_members) }) from family in curent.')
-
-        # need to update some object that truck what is in current
-        id_in_cur = tasks1.insert_to_curent(selected_id)
-
-        # create a layout
-        row = [buttons.task_layout(id_in_cur)]
-
-        # extend the window['Today tasks']
-        window.extend_layout(window["Today tasks"], row)
+        buttons.add_to_curent(selected_id, window)
 
     if event == "Add to db":
-        # check if the user exited
+        # check if the user exited earlier
         temp = buttons.add_task(con,'Tasks')
         if temp is None:
             continue
-        row,task_id = temp
+        task_id = temp
+
+        # creating list with updated values
         _, lst = interface2.create_sq_table(interface2.tasks1.cur)
+
+        # updating the table
         window['Tab'].update(values = lst)
 
     if event == "Remove from db":
+        # add some info that task wont be in raports
+
         # get id of selected row or do nothing if nothing is selected
         if values['Tab'] == []: 
             sg.Popup('Choose a task')
@@ -131,31 +118,8 @@ while True:
         [raw] = values['Tab']
         selected_id = lst[raw][0]
 
-        # check if task has a subtasks 
-        row = tasks1.get_row('Tasks',selected_id)
-        if eval(row['subtasks_id']) != []:
-            sg.Popup(f'There are some subtasks!') # lazy
-            continue
+        buttons.remove_from_db(selected_id, lst, window)
 
-        # check if it is in current!!
-
-        # check if task has a parent and remove it from parent 
-        if row['parent_id'] != None:
-            parent_id = row['parent_id']
-            parent = tasks1.get_row('Tasks',parent_id)
-            # print('list = ', eval(parent['subtasks_id']), ' id = ', selected_id)
-            sub_lst = eval(parent['subtasks_id'])
-            sub_lst.remove(selected_id)
-            # print(update_lst)
-            tasks1.cur.execute(f"UPDATE {'Tasks'} SET subtasks_id = ? WHERE id = {parent_id}", (repr(sub_lst),))
-
-        
-        # remove task from db
-        tasks1.delete('Tasks', selected_id)
-
-        # refresh Tab
-        _, lst = interface2.create_sq_table(interface2.tasks1.cur)
-        window['Tab'].update(values = lst)
 
     if isinstance(event,str) and event.split('-')[0] == "START":
         id = int(event.split('-')[1])
