@@ -1,7 +1,48 @@
-import interface2
-import tasks1
 import PySimpleGUI as sg
+import db_func
 import datetime
+
+
+con = db_func.con
+cur = db_func.cur
+
+
+def create_sq_table() -> tuple:
+    '''
+    Returns tuple Tab,lst where Tab is pysimplegui.Table() elements with data from Tasks table. lst is list with data from Tasks table.
+    '''
+    cur.execute(f"SELECT * FROM {'Tasks'}")
+    data = cur.fetchall()
+
+    headings = ['id','name', 'parent', 'subtasks', 'time']
+
+    lst = []
+
+    for raw in data:
+        id = raw['id']
+        name = raw['name']
+        #print(name)
+        if raw['parent_id'] is None:
+            parent = 'None'
+        else:
+            parent = db_func.get_row('Tasks', int(raw['parent_id']))['name']
+
+        subtasks = []
+        for id_s in eval(raw['subtasks_id']):
+            # print(id_s)
+            subtasks.append(db_func.get_row('Tasks', id_s)['name'])
+
+        subtasks = ', '.join(subtasks)
+
+        time = db_func.time('Tasks', raw['id']) 
+        time_str = str(time).split(".")[0] # it get rids of miliseconds
+
+        lst.append([id,name, parent, subtasks, time_str])
+
+    Tab = sg.Table(values = lst, headings = headings, enable_click_events = True, key = 'Tab')
+    
+    return Tab, lst
+
 
 
 
@@ -10,8 +51,6 @@ def task_layout(task_id = None):
     ''' Returns a layout for a single task. Tasks are from table Tasks. 
     taks_id is from Curent.
     '''
-
-    # No checkpoints for now
 
     Tasks_options = [
         sg.Button('|>', key = "START-" + str(task_id)),
@@ -23,12 +62,12 @@ def task_layout(task_id = None):
         ]
 
     # You need to take this data from database
-    if task_id is None:
+    if task_id is None: # for testing
         total_time = datetime.timedelta(0)
         task_duration = datetime.timedelta(0)
         name = 'Test'
     else:
-        task = tasks1.get_row('Curent',task_id)
+        task = db_func.get_row('Curent',task_id)
         total_time = datetime.timedelta(0)
         task_duration = eval(task['duration'])
         name = task['name']
@@ -43,7 +82,7 @@ def task_layout(task_id = None):
     return raw
 
 def tasks_layout(id_lst):
-    '''Returns a layout for all tasks form list od id'''
+    '''Returns a layout for all tasks form the list of id (from Curent)'''
     
     layout = [[]]
     
@@ -53,31 +92,35 @@ def tasks_layout(id_lst):
     return layout
 
 
-def add_task_button(con,window):
-    id_in_tasks = add_task(con,'Tasks')
+def add_task_button(window)-> None:
+    '''
+    Function that runs when you press add task button.
+    '''
+
+    id_in_tasks = add_task()
     # check if the user exited
     if not id_in_tasks:
         return
 
     # check if somebody from family is in curent
-    lst_of_parent = tasks1.get_parents('Tasks',id_in_tasks)
+    lst_of_parent = db_func.get_parents('Tasks', id_in_tasks)
 
 
     sql = 'SELECT * FROM Curent WHERE id_tasks IN ({0})'.format(', '.join('?' for _ in lst_of_parent))
-    tasks1.cur.execute(sql, tuple(lst_of_parent))
+    db_func.cur.execute(sql, tuple(lst_of_parent))
 
-    colision = tasks1.cur.fetchall()
+    colision = db_func.cur.fetchall()
 
     if colision:
         family_members = [row['name'] for row in colision]
         sg.Popup(f'There is a task ({ ",".join(family_members) }) from parents in curent. Task was add to database.')
 
     # Tasks table refresh
-    _, lst = interface2.create_sq_table(interface2.tasks1.cur)
+    _, lst = create_sq_table(db_func.cur)
     window['Tab'].update(values = lst)
 
     # Curent table refresh
-    id_in_curent = tasks1.insert_to_curent(id_in_tasks)
+    id_in_curent = db_func.insert_to_curent(id_in_tasks)
 
     # Adding a row to layout in curent tab
     row = [task_layout(id_in_curent)]
@@ -85,9 +128,9 @@ def add_task_button(con,window):
 
     return 
 
-def add_task(con,table):
+def add_task() -> id | None:
     '''
-    Add task to table. Returns id in that table (or None if exit). Don't create a layout.
+    Add task to table Tasks. Returns id (or None if exit). Don't create a layout.
     '''
     h = 60
     v = 1
@@ -159,7 +202,7 @@ def add_task(con,table):
             
             u_time = datetime.timedelta(hours = h, minutes = m, seconds = s)
 
-            task_id = tasks1.insert(table, values['name'], duration = duration, u_time = u_time, parent_id = parent_id, checkpoints = values['Checkpoints'], notes = values['-NOTES-'])
+            task_id = db_func.insert('Tasks', values['name'], duration = duration, u_time = u_time, parent_id = parent_id, checkpoints = values['Checkpoints'], notes = values['-NOTES-'])
 
             con.commit()
             add = True
@@ -176,8 +219,9 @@ def add_task(con,table):
 
 
 
-def edit_task(con, table, id, id_curent = None):
-    ''' The function that is starting when pressing Edit button. It changes the data of Tasks table and update database.
+def edit_task(id, id_curent = None):
+    ''' 
+    The function that is starting when pressing Edit button. It changes the data of Tasks table and update database. If id_curent is not None it changes data in Curent table.
     '''
     # In future you want to distinquish edit global and edit local (just in current?)
     h = 60
@@ -185,11 +229,11 @@ def edit_task(con, table, id, id_curent = None):
     r = 2
     s = 10
 
-    task = tasks1.get_row('Tasks',id)
+    task = db_func.get_row('Tasks',id)
     
     if task['parent_id'] is not None:
         parent_id = int(task['parent_id'])
-        parent_name = tasks1.get_row('Tasks',parent_id)['name']
+        parent_name = db_func.get_row('Tasks',parent_id)['name']
         parent_string = f'Id: {parent_id} Name: {parent_name}'
     else:
         parent_id = None
@@ -266,7 +310,7 @@ def edit_task(con, table, id, id_curent = None):
             
             u_time = datetime.timedelta(hours = h, minutes = m, seconds = s)
 
-            sql = f'''UPDATE {table}
+            sql = f'''UPDATE Tasks
                     SET name = ?,
                         duration = ?,
                         u_time = ?,
@@ -297,19 +341,16 @@ def edit_task(con, table, id, id_curent = None):
             break 
 
     window_add_tasks.close()
-    
-
-
 
     return 
     
 
 
-def id_name_from_db(cur):
-    '''Returns id,name from coursor cur that you selected from database table.'''
+def id_name_from_db() -> tuple(int,str):
+    '''Returns tuple id,name from coursor cur that you selected from database table.'''
 
 
-    t, lst = interface2.create_sq_table(interface2.tasks1.cur)
+    t, lst = create_sq_table()
 
     window = sg.Window('Database', layout =[[t],[sg.Button("Choose", key = "Choose")]], default_element_size=(12,1))
 
@@ -379,7 +420,10 @@ def read_value(title, value = ''):
 
     return event, values
 
-def is_number(s):
+def is_number(s) -> bool:
+    '''
+    Returns True if it can convert s to float.
+    '''
     try:
         float(s)
         return True
@@ -394,7 +438,7 @@ def description(selected_id: int, window) -> None:
     selected_id : int
     window : pysimplegui Window()
     '''
-    selection = tasks1.get_row('Tasks', selected_id)
+    selection = db_func.get_row('Tasks', selected_id)
 
     if selection is None:
         return
@@ -402,11 +446,11 @@ def description(selected_id: int, window) -> None:
     if selection['parent_id'] is None:
         parent = 'None'
     else:
-        parent = tasks1.get_row(tasks1.table, int(selection['parent_id']))['name']
+        parent = db_func.get_row(db_func.table, int(selection['parent_id']))['name']
 
     subtasks = []
     for id_s in eval(selection['subtasks_id']):
-            subtasks.append(tasks1.get_row(tasks1.table, id_s)['name'])
+            subtasks.append(db_func.get_row(db_func.table, id_s)['name'])
 
     subtasks = ', '.join(subtasks)
 
@@ -423,21 +467,21 @@ def add_to_curent(selected_id: int, window) -> None:
     '''
 
     # check if somebody from family is in curent
-    lst_of_parent = tasks1.get_parents('Tasks',selected_id)
-    lst_of_childs = tasks1.get_childs('Tasks',selected_id)
+    lst_of_parent = db_func.get_parents('Tasks',selected_id)
+    lst_of_childs = db_func.get_childs('Tasks',selected_id)
     family = lst_of_parent + lst_of_childs + [selected_id]
 
     sql = 'SELECT * FROM Curent WHERE id_tasks IN ({0})'.format(', '.join('?' for _ in family))
-    tasks1.cur.execute(sql, tuple(family))
+    db_func.cur.execute(sql, tuple(family))
 
-    colision = tasks1.cur.fetchall()
+    colision = db_func.cur.fetchall()
 
     if colision:
         family_members = [row['name'] for row in colision]
         sg.Popup(f'There is a task ({ ",".join(family_members) }) from family in curent.')
 
     # insert data to Curent table
-    id_in_cur = tasks1.insert_to_curent(selected_id)
+    id_in_cur = db_func.insert_to_curent(selected_id)
 
     # create a layout
     row = [task_layout(id_in_cur)]
@@ -450,13 +494,13 @@ def add_to_curent(selected_id: int, window) -> None:
 
 def remove_from_db(selected_id: int):
     '''
-    Remove task (selected_id) from Tasks table. Take care of parent data. Not updating database tab.
+    Remove task (selected_id) from Tasks table. Take care of parent data. Not refreshing database tab.
     selected_id : int (id in Tasks table)
     '''
     # check if it is in current!!
 
     # check if task has a subtasks 
-    row = tasks1.get_row('Tasks',selected_id)
+    row = db_func.get_row('Tasks',selected_id)
     
     if row == None:
         return
@@ -470,24 +514,13 @@ def remove_from_db(selected_id: int):
     # check if task has a parent and remove it from parent 
     if row['parent_id'] != None:
         parent_id = row['parent_id']
-        parent = tasks1.get_row('Tasks',parent_id)
+        parent = db_func.get_row('Tasks',parent_id)
         # print('list = ', eval(parent['subtasks_id']), ' id = ', selected_id)
         sub_lst = eval(parent['subtasks_id'])
         sub_lst.remove(selected_id)
         # print(update_lst)
-        tasks1.cur.execute(f"UPDATE {'Tasks'} SET subtasks_id = ? WHERE id = {parent_id}", (repr(sub_lst),))
+        db_func.cur.execute(f"UPDATE {'Tasks'} SET subtasks_id = ? WHERE id = {parent_id}", (repr(sub_lst),))
 
     # remove task from db
-    tasks1.delete('Tasks', selected_id)
-
-
-
-# con = sqlite3.connect('data.db')
-
-# add_task(con,'Tasks')
-
-# edit_checkpoints(['do this', 'remember this'])
-# print(read_value('miki','some values'))
-
-# con.close()
-        
+    db_func.delete('Tasks', selected_id)
+    

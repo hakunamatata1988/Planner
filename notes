@@ -1,10 +1,5 @@
-line 32  parent.add_subtask(self) # likly change to self.id
+in future you want to replace tasks1.py by db_func.py
+To create an example of database run example.py
 
-think how to deal with time history in database
+interface2 is now interface
 
-create a function that converts id -> task
-
-tast all the functions!
-
-when to use database interface and when to use objects and attributes?
-    you probably can simplyfy program by not callint task to simple edits

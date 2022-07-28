@@ -32,16 +32,8 @@ def create_sq_table(cur):
 
     Tab = sg.Table(values = lst, headings = headings, enable_click_events = True, key = 'Tab')
     
-    return Tab,lst
+    return Tab, lst
 
-    # Tab = [[
-    #     sg.Table(values = lst, headings = headings, enable_click_events = True, key = 'Tab')
-    #     ],
-    #     [
-    #     sg.Button("Add to db", key = "Add to db"),
-    #     sg.Button("Remove from db", key = "-Remove from db"),
-    #     sg.Button("Add to current", key = "Add to current")
-    #     ]
-    # ]
+
 
     

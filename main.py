@@ -77,9 +77,10 @@ while True:
     if event[0] == 'Tab':
         # getting id
         row = event[2][0]
-        print('row =', row)
-        print('lst = ', lst)
-        print('window[Tab] = ', window['Tab'].values)
+        
+        # print('row =', row)
+        # print('lst = ', lst)
+
         if row is None:
             continue
         selected_id = lst[row][0]
@@ -124,7 +125,11 @@ while True:
         [raw] = values['Tab']
         selected_id = lst[raw][0]
 
-        buttons.remove_from_db(selected_id, window)
+        buttons.remove_from_db(selected_id)
+
+        # refresh Tab
+        _, lst = interface2.create_sq_table(interface2.tasks1.cur)
+        window['Tab'].update(values = lst)
 
 
     if isinstance(event,str) and event.split('-')[0] == "START":
@@ -154,9 +159,13 @@ while True:
 
     if isinstance(event,str) and event.split('-')[0] == "PAUSE":
         id = int(event.split('-')[1])
-        id_task = tasks1.get_row('Curent',id)['id_tasks']
 
-        # id = tasks1.get_row('Curent',id)
+        # you dont want to pause not active task (in curent, can be active in tasks)
+        task = tasks1.get_row('Curent',id)
+        if task['active'] == "False":
+            continue
+
+        id_task = tasks1.get_row('Curent',id)['id_tasks']
 
         tasks1.deactivate('Curent', id, family = False)
         tasks1.deactivate('Tasks', id_task)
@@ -170,6 +179,8 @@ while True:
         # just for testing
         tasks1.show_table('Tasks')
 
+
+    # Updating a progress of active tasks in curent
     tasks1.cur.execute("Select * FROM Curent WHERE active = 'True'",)
     for task in tasks1.cur.fetchall():
         # from id in current to id in tasks

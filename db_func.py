@@ -1,13 +1,22 @@
+'''
+File with functions that are creating tables, updating, selecting etc. Note if the table has to be Tasks.
+'''
+
 import datetime
 import sqlite3
+from main import file
 
-con = sqlite3.connect('data.db') # note that at this point you are working with one database
 
+con = sqlite3.connect(file) # note that at this point you are working with one database
 con.row_factory = sqlite3.Row # to get an acces to values in raw as in dictionary
+cur = con.cursor() # one cursor for all the functions below
 
-cur = con.cursor()
 
-def create_table(name):
+
+def create_table(name:str)-> None:
+        '''
+        Creates a table Tasks in database. Can set name = 'Tasks'. Retuns None;
+        '''
         # potential SQL injection
         # can add atomic task to time_history intervals
         # can add notes
@@ -27,7 +36,10 @@ def create_table(name):
                 """.format(name))
 
 
-def create_table_curent():
+def create_table_curent() -> None:
+        '''
+        Creates a table Curent in database. Retuns None;
+        '''
         with con:
                 cur.execute(""" CREATE TABLE Curent (
                         id INTEGER PRIMARY KEY,
@@ -41,7 +53,7 @@ def create_table_curent():
 
 
 def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent_id = None, checkpoints = '', notes = ''):
-        '''insert a recor to db,  retuns id of the inserted record'''
+        '''Insert a recor to db (table Tasks),  retuns id of the inserted record. Name can be set to Tasks'''
 
 # connection is set globally
 # not sure how many parameters you need
@@ -58,7 +70,8 @@ def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = da
 
                 return cur.lastrowid
 
-def insert_to_curent(id_tasks, u_time = datetime.timedelta(0)):
+def insert_to_curent(id_tasks, u_time = datetime.timedelta(0)) -> int:
+        '''Insert a recor to db (table Curent),  retuns id of the inserted record. Data from table Tasks'''
         # should be already in Tasks
         # u_time not implemented correctly yet
 
@@ -78,7 +91,8 @@ def insert_to_curent(id_tasks, u_time = datetime.timedelta(0)):
                 
 
 
-def delete(table, id ):
+def delete(table: str, id : int) -> None:
+        '''Delete record from table (arbitrary) by id.'''
 # not sure how many parameters you need
 # potential SQL injection
         with con:
@@ -92,13 +106,14 @@ def delete_table(table):
 
 
 def get_row(table,id):
-
+        '''Retuns a row from a table by id (arbitrary table)'''
         with con:
                 cur.execute(f"SELECT * FROM {table} WHERE id = ?", (id,))
                 return cur.fetchone()
 
 
 def add_subtask(table, id, subtask_id):
+        '''Not used in project.'''
         # no checking for loops yet
         with con:
                 cur.execute(f"SELECT * FROM {table} WHERE id = ?", (id,))
@@ -110,7 +125,8 @@ def add_subtask(table, id, subtask_id):
 
 
 
-def show_table(table):
+def show_table(table: str) -> None:
+        '''Showes arbitrary table with headers.'''
         with con:
                 cur.execute(f'PRAGMA table_info({table})')
                 desc = cur.fetchall()
@@ -120,13 +136,10 @@ def show_table(table):
                 for row in cur.execute(f"SELECT * FROM {table}"):
                         print(tuple(row))
 
-def get_parents(table,id):
+def get_parents(table : str, id: int) -> list:
         '''
-        id should be from Tasks.
-        table should be Tasks.
+        Retuns the list of all parents id (all generations). Parents are ordered from the closest. Tested only for table Tasks
         '''
-        # Returns list of all parents id (all generations)
-        # Order from the closest
 
         task = get_row(table,id)
 
@@ -137,10 +150,10 @@ def get_parents(table,id):
                 return [id_parent] + get_parents(table,id_parent)
 
 
-def activate(table, id, parents = True):
+def activate(table:str, id:int, parents = True) -> None:
         '''
-        id should be from Tasks.
-        table should be Tasks.
+        Change the active column to 'True' if it wasn't. Does the same for parents if parents = True in signature.
+        Should be working on both tables (but use parents = False on Curent table).
         '''
         with con:
                 task = get_row(table,id)
@@ -163,10 +176,8 @@ def activate(table, id, parents = True):
 
 
 
-def get_childs(table,id):
-        '''Returns the list of ids of all childes (all generations)
-        id should be from Tasks.
-        table should be Tasks.
+def get_childs(table:str,id:int) -> list:
+        '''Returns the list of ids of all childes (all generations) from Tasks table. Table can be set to Tasks.
         '''
 
         task = get_row(table,id)
@@ -179,10 +190,10 @@ def get_childs(table,id):
 
                 return lst_id
         
-def deactivate(table, id, family = True):
+def deactivate(table:str, id:int, family = True) -> list:
         '''
-        id should be from Tasks.
-        table should be Tasks.
+        Change the active column active to 'False' if it wasn't. Does the same for family if family = True in signature.
+        Should be working on both tables (but use family = False on Curent table).
         ''' 
         with con:
                 task = get_row(table,id)
@@ -222,9 +233,9 @@ def deactivate(table, id, family = True):
                         lst[-1].append(now)
                         cur.execute(f"UPDATE {table} SET time_history = '{repr(lst)}', active = 'False' WHERE id = {id_c}")                         
 
-def time(table, id):
+def time(table:str, id:int):
         '''
-        May work for both tables.
+        Sums up and returns times spend on the task. Should work on both tables (need column 'time_history', 'u_time' and 'active') 
         '''
         with con:
                 task = get_row(table,id)
@@ -239,12 +250,15 @@ def time(table, id):
                 t = datetime.timedelta(0)
                 for start,end in time_lst:
                         dt = end - start
-                        t +=dt
+                        t += dt
                 
                 return t + eval(task['u_time'])
 
 
 def add_checkpoint(table, id, description):
+        '''
+        Not used in project.
+        '''
         # You can make it more robust. You can get points (progress) for a checkpoint or set time (or data) to reach checkpoint
         with con:
                 task = get_row(table,id)
@@ -252,48 +266,3 @@ def add_checkpoint(table, id, description):
                 cur.execute(f"UPDATE {table} SET checkpoints = ? WHERE id = {id}", (repr(checkpoint_lst),))
 
 
-
-
-# Uncomment to test
-
-delete_table("Tasks")
-create_table("Tasks")
-delete_table("Curent")
-create_table_curent()
-
-
-insert("Tasks","new task1")
-insert("Tasks","new task2", parent_id =1)
-insert("Tasks","new task3", parent_id =1)
-insert("Tasks","new task4", parent_id =2)
-insert("Tasks","new task5")
-insert("Tasks","new task6", parent_id =5)
-insert("Tasks","new task7", parent_id =5)
-insert("Tasks","new task8", parent_id =7)
-
-# insert_to_curent(1)
-# insert_to_curent(7)
-# insert_to_curent(2)
-# insert_to_curent(3)
-
-table = "Tasks"
-
-# activate('Curent',1, parents = False)
-# deactivate('Curent',1,family = False)
-
-
-# activate(table, 5)
-# deactivate(table,5)
-# add_checkpoint(table, 1, 
-# 'buy a milk')
-
-# show_table("Tasks")
-# show_table('Curent')
-
-# print('time 1 = ',time('Curent', 1))
-# print(time(table, 5))
-# con.commit()
-
-# con.close()
-
-# %%
