@@ -485,9 +485,9 @@ def remove_from_db(selected_id: int, window):
 
     # refresh Tab
     _, lst = interface2.create_sq_table(interface2.tasks1.cur)
+    
     window['Tab'].update(values = lst)
 
-    return lst
 
 # con = sqlite3.connect('data.db')
 

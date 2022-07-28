@@ -77,6 +77,11 @@ while True:
     if event[0] == 'Tab':
         # getting id
         row = event[2][0]
+        print('row =', row)
+        print('lst = ', lst)
+        print('window[Tab] = ', window['Tab'].values)
+        if row is None:
+            continue
         selected_id = lst[row][0]
 
         buttons.description(selected_id, window)
@@ -91,6 +96,7 @@ while True:
             sg.Popup('Choose a task')
             continue
         [raw] = values['Tab']
+
         selected_id = lst[raw][0]
 
         buttons.add_to_curent(selected_id, window)
@@ -118,7 +124,7 @@ while True:
         [raw] = values['Tab']
         selected_id = lst[raw][0]
 
-        buttons.remove_from_db(selected_id, lst, window)
+        buttons.remove_from_db(selected_id, window)
 
 
     if isinstance(event,str) and event.split('-')[0] == "START":
