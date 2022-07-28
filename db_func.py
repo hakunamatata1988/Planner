@@ -4,9 +4,8 @@ File with functions that are creating tables, updating, selecting etc. Note if t
 
 import datetime
 import sqlite3
-from main import file
 
-
+file = 'data.db' # file should be chosen by user, note that you are using one conection
 con = sqlite3.connect(file) # note that at this point you are working with one database
 con.row_factory = sqlite3.Row # to get an acces to values in raw as in dictionary
 cur = con.cursor() # one cursor for all the functions below

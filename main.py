@@ -1,12 +1,11 @@
 import PySimpleGUI as sg
-import interface2
-import buttons
+import interface
 import sqlite3
-import tasks1
+import db_func
 import datetime
+
 # think if your imports are optimal, any circular imports?
 
-# change lst to window['Tab'] ???
 
 
 starting_tasks = [] # should be loaded from curent
@@ -14,13 +13,11 @@ starting_tasks = [] # should be loaded from curent
 bcolor = sg.theme_background_color()
 tcolor = sg.theme_text_color()
 
-file = 'data.db'
-con = sqlite3.connect(file) # file should be chosen by user, note that you are using one conection
-# conection and cursor probably should be in the same file
+con = db_func.con 
 
 # Curent tab layout
 tab1_layout = [
-        [sg.Frame("Tasks", key = "Today tasks", layout = buttons.tasks_layout(starting_tasks))],
+        [sg.Frame("Tasks", key = "Today tasks", layout = interface.tasks_layout(starting_tasks))],
         [sg.VStretch()],
         [
             sg.Button("Add task", key = "-ADD TASK-"),
@@ -32,10 +29,10 @@ tab1_layout = [
     ]
 
 # Database tab layout
-t,lst = interface2.create_sq_table(interface2.tasks1.cur)
+t,lst = interface.create_sq_table()
 
 tab2_layout= [
-    [t, sg.Multiline("Just some description of the task",key = "description", expand_y = True, background_color = bcolor, text_color = tcolor)],
+    [t, sg.Multiline("Just some description of the task",key = "description", expand_y = True, expand_x = True, background_color = bcolor, text_color = tcolor)],
     [
         sg.Button("Add to db", key = "Add to db"),
         sg.Button("Remove from db", key = "Remove from db"),
@@ -62,14 +59,14 @@ while True:
     if event == sg.WIN_CLOSED: 
         # Saving progress of curent active tasks
 
-        tasks1.cur.execute("Select * FROM Curent WHERE active = 'True'",)
-        for task in tasks1.cur.fetchall():
+        db_func.cur.execute("Select * FROM Curent WHERE active = 'True'",)
+        for task in db_func.cur.fetchall():
             # from id in current to id in tasks
             id_curent = int(task['id'])
             id_task = int(task['id_tasks'])
 
-            tasks1.deactivate('Curent', id_curent, family = False) # deactivate not wirking on curent?
-            tasks1.deactivate('Tasks', id_task)
+            db_func.deactivate('Curent', id_curent, family = False) # deactivate not wirking on curent?
+            db_func.deactivate('Tasks', id_task)
 
         con.commit()  
         break  
@@ -85,11 +82,11 @@ while True:
             continue
         selected_id = lst[row][0]
 
-        buttons.description(selected_id, window)
+        interface.description(selected_id, window)
         
 
     if event == "-ADD TASK-":
-        buttons.add_task_button(con,window)
+        interface.add_task_button(window)
 
     if event == "Add to current":
         # get id of selected row or do nothing if nothing is selected
@@ -100,17 +97,17 @@ while True:
 
         selected_id = lst[raw][0]
 
-        buttons.add_to_curent(selected_id, window)
+        interface.add_to_curent(selected_id, window)
 
     if event == "Add to db":
         # check if the user exited earlier
-        temp = buttons.add_task(con,'Tasks')
+        temp = interface.add_task(con,'Tasks')
         if temp is None:
             continue
         task_id = temp
 
         # creating list with updated values
-        _, lst = interface2.create_sq_table(interface2.tasks1.cur)
+        _, lst = interface.create_sq_table(interface.db_func.cur)
 
         # updating the table
         window['Tab'].update(values = lst)
@@ -125,93 +122,93 @@ while True:
         [raw] = values['Tab']
         selected_id = lst[raw][0]
 
-        buttons.remove_from_db(selected_id)
+        interface.remove_from_db(selected_id)
 
         # refresh Tab
-        _, lst = interface2.create_sq_table(interface2.tasks1.cur)
+        _, lst = interface.create_sq_table()
         window['Tab'].update(values = lst)
 
 
     if isinstance(event,str) and event.split('-')[0] == "START":
         id = int(event.split('-')[1])
         sql = 'SELECT * FROM Curent WHERE id = ?'
-        tasks1.cur.execute(sql, (id,))
-        id_tasks = tasks1.cur.fetchone()['id_tasks']
+        db_func.cur.execute(sql, (id,))
+        id_tasks = db_func.cur.fetchone()['id_tasks']
 
         # checking if sb from family is active
-        lst_of_parent = tasks1.get_parents('Tasks',id_tasks)
-        lst_of_childs = tasks1.get_childs('Tasks',id_tasks)
+        lst_of_parent = db_func.get_parents('Tasks',id_tasks)
+        lst_of_childs = db_func.get_childs('Tasks',id_tasks)
         family = lst_of_parent + lst_of_childs + [id_tasks]
 
         sql = 'SELECT * FROM Tasks WHERE id IN ({0}) AND active = "True"'.format(', '.join('?' for _ in family))
-        tasks1.cur.execute(sql, tuple(family))
+        db_func.cur.execute(sql, tuple(family))
 
-        colision = tasks1.cur.fetchall()
+        colision = db_func.cur.fetchall()
 
         if colision:
             family_members = [row['name'] for row in colision]
             sg.Popup(f'There is a task ({ ",".join(family_members) }) from family that is running. Pause it to start this one.')
             continue
 
-        tasks1.activate('Curent',id, parents = False)
-        tasks1.activate('Tasks',id_tasks)
+        db_func.activate('Curent',id, parents = False)
+        db_func.activate('Tasks',id_tasks)
 
 
     if isinstance(event,str) and event.split('-')[0] == "PAUSE":
         id = int(event.split('-')[1])
 
         # you dont want to pause not active task (in curent, can be active in tasks)
-        task = tasks1.get_row('Curent',id)
+        task = db_func.get_row('Curent',id)
         if task['active'] == "False":
             continue
 
-        id_task = tasks1.get_row('Curent',id)['id_tasks']
+        id_task = db_func.get_row('Curent',id)['id_tasks']
 
-        tasks1.deactivate('Curent', id, family = False)
-        tasks1.deactivate('Tasks', id_task)
+        db_func.deactivate('Curent', id, family = False)
+        db_func.deactivate('Tasks', id_task)
 
 
     if event == '-CLEAR-':
         # just for testing
-        tasks1.show_table('Curent')
+        db_func.show_table('Curent')
 
     if event == '-DAY-':
         # just for testing
-        tasks1.show_table('Tasks')
+        db_func.show_table('Tasks')
 
 
     # Updating a progress of active tasks in curent
-    tasks1.cur.execute("Select * FROM Curent WHERE active = 'True'",)
-    for task in tasks1.cur.fetchall():
+    db_func.cur.execute("Select * FROM Curent WHERE active = 'True'",)
+    for task in db_func.cur.fetchall():
         # from id in current to id in tasks
         id_curent = int(task['id'])
         id_task = int(task['id_tasks'])
 
-        t = tasks1.time('Curent', id_curent)
+        t = db_func.time('Curent', id_curent)
         d = eval(task['duration']).total_seconds()
         window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
         window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
 
     
     if event == 'Tab group':
-        _, lst = interface2.create_sq_table(interface2.tasks1.cur)
+        _, lst = interface.create_sq_table()
         window['Tab'].update(values = lst)
 
     if isinstance(event,str) and event.split('-')[0] == "EDIT":
         id = int(event.split('-')[1])
         sql = 'SELECT * FROM Curent WHERE id = ?'
-        tasks1.cur.execute(sql, (id,))
-        task =  tasks1.cur.fetchone()
+        db_func.cur.execute(sql, (id,))
+        task =  db_func.cur.fetchone()
         id_tasks = task['id_tasks']
 
 
-        buttons.edit_task(con, 'Tasks', id_tasks, id)
-        tasks1.cur.execute(sql, (id,))
-        task =  tasks1.cur.fetchone()
+        interface.edit_task(id_tasks, id)
+        db_func.cur.execute(sql, (id,))
+        task =  db_func.cur.fetchone()
         # name update
         window['TASK NAME-' + str(id)].update(task['name'])
         # progresbarr update
-        t = tasks1.time('Curent', id)
+        t = db_func.time('Curent', id)
         d = eval(task['duration']).total_seconds()
         window['TIME-' + str(id)].update(str(t).split('.')[0])
         window['PROGRESS-' + str(id)].update(current_count = t.total_seconds(), max=d)

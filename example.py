@@ -1,5 +1,5 @@
 '''
-Run to quickly set up some database. Table Curent will be empty.
+Run to quickly set up some database. Table Curent will be empty. Not sure about signatures.
 '''
 
 

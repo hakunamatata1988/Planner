@@ -2,7 +2,6 @@ import PySimpleGUI as sg
 import db_func
 import datetime
 
-
 con = db_func.con
 cur = db_func.cur
 
@@ -116,7 +115,7 @@ def add_task_button(window)-> None:
         sg.Popup(f'There is a task ({ ",".join(family_members) }) from parents in curent. Task was add to database.')
 
     # Tasks table refresh
-    _, lst = create_sq_table(db_func.cur)
+    _, lst = create_sq_table()
     window['Tab'].update(values = lst)
 
     # Curent table refresh
@@ -128,7 +127,7 @@ def add_task_button(window)-> None:
 
     return 
 
-def add_task() -> id | None:
+def add_task():
     '''
     Add task to table Tasks. Returns id (or None if exit). Don't create a layout.
     '''
@@ -184,7 +183,7 @@ def add_task() -> id | None:
             break
 
         if event == 'Select parent':
-            temp = id_name_from_db(cur)
+            temp = id_name_from_db()
             if temp != None:
                 parent_id, parent_name = temp
                 window_add_tasks['Parent'].update(f'Id: {parent_id} Name: {parent_name}')
@@ -346,7 +345,7 @@ def edit_task(id, id_curent = None):
     
 
 
-def id_name_from_db() -> tuple(int,str):
+def id_name_from_db():
     '''Returns tuple id,name from coursor cur that you selected from database table.'''
 
 
@@ -446,11 +445,11 @@ def description(selected_id: int, window) -> None:
     if selection['parent_id'] is None:
         parent = 'None'
     else:
-        parent = db_func.get_row(db_func.table, int(selection['parent_id']))['name']
+        parent = db_func.get_row('Tasks', int(selection['parent_id']))['name']
 
     subtasks = []
     for id_s in eval(selection['subtasks_id']):
-            subtasks.append(db_func.get_row(db_func.table, id_s)['name'])
+            subtasks.append(db_func.get_row('Tasks', id_s)['name'])
 
     subtasks = ', '.join(subtasks)
 
