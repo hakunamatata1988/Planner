@@ -7,17 +7,24 @@ import datetime
 # think if your imports are optimal, any circular imports?
 
 
-
-starting_tasks = [] # should be loaded from curent
-
 bcolor = sg.theme_background_color()
 tcolor = sg.theme_text_color()
 
 con = db_func.con 
+cur = db_func.cur
+
+# selecting all ids from curent
+# may be a good ide to add this code to tasks_layout
+cur.execute("SELECT id FROM CURENT")
+ids_curent = []
+for task in cur.fetchall():
+    ids_curent.append(task['id'])
+
+
 
 # Curent tab layout
 tab1_layout = [
-        [sg.Frame("Tasks", key = "Today tasks", layout = interface.tasks_layout(starting_tasks))],
+        [sg.Frame("Tasks", key = "Today tasks", layout = interface.tasks_layout(ids_curent))],
         [sg.VStretch()],
         [
             sg.Button("Add task", key = "-ADD TASK-"),
@@ -49,7 +56,19 @@ layout = [[
         key = 'Tab group', enable_events= True)
     ]] 
 
-window = sg.Window('Tracker', layout, default_element_size=(12,1), finalize = True, )    
+window = sg.Window('Tracker', layout, default_element_size=(12,1), finalize = True)    
+
+# to update a progress bar, create a function?
+db_func.cur.execute("Select * FROM Curent")
+for task in db_func.cur.fetchall():
+    # from id in current to id in tasks
+    id_curent = int(task['id'])
+    id_task = int(task['id_tasks'])
+
+    t = db_func.time('Curent', id_curent)
+    d = eval(task['duration']).total_seconds()
+    window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
+    window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
 
 while True:    
 
@@ -65,7 +84,7 @@ while True:
             id_curent = int(task['id'])
             id_task = int(task['id_tasks'])
 
-            db_func.deactivate('Curent', id_curent, family = False) # deactivate not wirking on curent?
+            db_func.deactivate('Curent', id_curent, family = False)
             db_func.deactivate('Tasks', id_task)
 
         con.commit()  
@@ -101,7 +120,7 @@ while True:
 
     if event == "Add to db":
         # check if the user exited earlier
-        temp = interface.add_task(con,'Tasks')
+        temp = interface.add_task(c)
         if temp is None:
             continue
         task_id = temp
@@ -177,17 +196,6 @@ while True:
         db_func.show_table('Tasks')
 
 
-    # Updating a progress of active tasks in curent
-    db_func.cur.execute("Select * FROM Curent WHERE active = 'True'",)
-    for task in db_func.cur.fetchall():
-        # from id in current to id in tasks
-        id_curent = int(task['id'])
-        id_task = int(task['id_tasks'])
-
-        t = db_func.time('Curent', id_curent)
-        d = eval(task['duration']).total_seconds()
-        window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
-        window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
 
     
     if event == 'Tab group':
@@ -213,9 +221,20 @@ while True:
         window['TIME-' + str(id)].update(str(t).split('.')[0])
         window['PROGRESS-' + str(id)].update(current_count = t.total_seconds(), max=d)
 
+    # Updating a progress of active tasks in curent
+    db_func.cur.execute("Select * FROM Curent WHERE active = 'True'",)
+    for task in db_func.cur.fetchall():
+        # from id in current to id in tasks
+        id_curent = int(task['id'])
+        id_task = int(task['id_tasks'])
+
+        t = db_func.time('Curent', id_curent)
+        d = eval(task['duration']).total_seconds()
+        window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
+        window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
 
 
-
-
+con.commit()
+con.close()
 print('window closing')
 window.close()

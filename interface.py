@@ -47,7 +47,7 @@ def create_sq_table() -> tuple:
 
 
 def task_layout(task_id = None):
-    ''' Returns a layout for a single task. Tasks are from table Tasks. 
+    ''' Returns a layout for a single task. Tasks are from table Tasks (not true?). 
     taks_id is from Curent.
     '''
 
@@ -67,14 +67,15 @@ def task_layout(task_id = None):
         name = 'Test'
     else:
         task = db_func.get_row('Curent',task_id)
-        total_time = datetime.timedelta(0)
+        t = db_func.time('Curent', task_id)
         task_duration = eval(task['duration'])
         name = task['name']
 
 
+
     Tasks_progress = [sg.ProgressBar(task_duration.total_seconds() , size = (10,20), expand_x = True, key = "PROGRESS-" + str(task_id))]
 
-    Task_time = [sg.Text(str(total_time).split(".")[0], key = "TIME-" + str(task_id))]
+    Task_time = [sg.Text(str(t).split('.')[0], key = "TIME-" + str(task_id))]
     
     raw =  [sg.Checkbox('', key = 'CHECKBOX-' + str(task_id), enable_events= True)] + [sg.Text(name , key = 'TASK NAME-' + str(task_id), size = (12,1))] + Tasks_options + Tasks_progress + Task_time
 
