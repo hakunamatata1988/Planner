@@ -10,13 +10,17 @@ To do:
 - save current table, and tasks table when quiting +
 - load right lay out for curent tab at the start   +
 
-- clear button saves all data and load empty curent tab 
-- make not posible to change parent of a task
+- clear button saves all data and load empty curent tab +
+- make not posible to change parent of a task +
+- show the remaining time when hovering over progress bar +
 - make posible to add untrack time (maybe in diffrent way)
 
+-------
+compile to exe file and use
 
 Future plans:
 - daily/weekly etc raports
+- filters 
 - tree view of the database (see pysimplegui.Tree)
 - progras bar when in Edit/notes view
 - 

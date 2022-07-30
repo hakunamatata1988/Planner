@@ -3,74 +3,88 @@ import interface
 import sqlite3
 import db_func
 import datetime
+from re import split
 
 # think if your imports are optimal, any circular imports?
 
+def create_window():
+    '''
+    Need when refreshing window
+    '''
 
-bcolor = sg.theme_background_color()
-tcolor = sg.theme_text_color()
+    global lst, con, cur
+    global bcolor, tcolor
 
-con = db_func.con 
-cur = db_func.cur
+    bcolor = sg.theme_background_color()
+    tcolor = sg.theme_text_color()
 
-# selecting all ids from curent
-# may be a good ide to add this code to tasks_layout
-cur.execute("SELECT id FROM CURENT")
-ids_curent = []
-for task in cur.fetchall():
-    ids_curent.append(task['id'])
+    con = db_func.con 
+    cur = db_func.cur
+
+    # selecting all ids from curent
+    # may be a good ide to add this code to tasks_layout
+    cur.execute("SELECT id FROM CURENT")
+    ids_curent = []
+    for task in cur.fetchall():
+        ids_curent.append(task['id'])
 
 
 
-# Curent tab layout
-tab1_layout = [
-        [sg.Frame("Tasks", key = "Today tasks", layout = interface.tasks_layout(ids_curent))],
-        [sg.VStretch()],
-        [
-            sg.Button("Add task", key = "-ADD TASK-"),
-            sg.Button("Clear Curent", key  = "-CLEAR CURENT-"),
-            sg.Stretch(),
-            sg.Button("Curent", key = "-CURENT-"),
-            sg.Button("Tasks", key = "-TASKS-"), 
-            sg.Stretch(), 
-            sg.Text(key = "INFO", justification= "right")
-            ]
-    ]
-
-# Database tab layout
-t,lst = interface.create_sq_table()
-
-tab2_layout= [
-    [t, sg.Multiline("Just some description of the task",key = "description", expand_y = True, expand_x = True, background_color = bcolor, text_color = tcolor)],
-    [
-        sg.Button("Add to db", key = "Add to db"),
-        sg.Button("Remove from db", key = "Remove from db"),
-        sg.Button("Add to current", key = "Add to current")
+    # Curent tab layout
+    tab1_layout = [
+            [sg.Frame("Tasks", expand_x = True, key = "Today tasks", layout = interface.tasks_layout(ids_curent))],
+            [sg.VStretch()],
+            [
+                sg.Button("Add task", key = "-ADD TASK-"),
+                sg.Button("Clear Curent", key  = "-CLEAR CURENT-"),
+                sg.Stretch(),
+                sg.Button("Curent", key = "-CURENT-"),
+                sg.Button("Tasks", key = "-TASKS-"), 
+                sg.Stretch(), 
+                sg.Text(key = "INFO", size = (15,None), justification= "right")
+                ]
         ]
-    ]
+
+    # Database tab layout
+    t,lst = interface.create_sq_table()
+
+    tab2_layout= [
+        [t, sg.Multiline("Just some description of the task",key = "description", expand_y = True, expand_x = True, background_color = bcolor, text_color = tcolor)],
+        [
+            sg.Button("Add to current", key = "Add to current"),
+            sg.Button("Add to db", key = "Add to db"),
+            sg.Button("Remove from db", key = "Remove from db"),
+            ]
+        ]
 
 
-# Window layout
-layout = [[
-    sg.TabGroup([[
-        sg.Tab('Curent tasks', tab1_layout), 
-        sg.Tab('Database', tab2_layout, key = 'Tab database')]],
-        key = 'Tab group', enable_events= True)
-    ]] 
+    # Window layout
+    layout = [[
+        sg.TabGroup([[
+            sg.Tab('Curent tasks', tab1_layout), 
+            sg.Tab('Database', tab2_layout, key = 'Tab database')]],
+            key = 'Tab group', enable_events= True)
+        ]] 
 
-window = sg.Window('Tracker', layout, default_element_size=(12,1), finalize = True)    
+    window = sg.Window('Tracker', layout, default_element_size=(12,1), finalize = True)    
 
-# to update a progress bar, create a function?
-db_func.cur.execute("Select * FROM Curent")
-for task in db_func.cur.fetchall():
-    # from id in current to id in tasks
-    id_curent = int(task['id'])
-    id_task = int(task['id_tasks'])
+    # to update a progress bar, create a function?
+    db_func.cur.execute("Select * FROM Curent")
+    for task in db_func.cur.fetchall():
+        # from id in current to id in tasks
+        id_curent = int(task['id'])
+        id_task = int(task['id_tasks'])
 
-    t = db_func.time('Curent', id_curent)
-    d = eval(task['duration']).total_seconds()
-    window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
-    window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
+        t = db_func.time('Curent', id_curent)
+        d = eval(task['duration']).total_seconds()
+        window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
+        window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
+        window['TIME-' + str(id_curent)].bind('<Enter>', '+')
+        window['TIME-' + str(id_curent)].bind('<Leave>', '-')
+
+    return window
+
+window = create_window()
 
 while True:    
 
@@ -199,11 +213,15 @@ while True:
             db_func.deactivate('Curent', id_curent, family = False)
             db_func.deactivate('Tasks', id_task)
 
-        con.commit()  
-
-
         db_func.delete_table("Curent")
         db_func.create_table_curent()
+
+        con.commit()  
+
+        window.close()
+        window = create_window()
+
+
 
 
     if event == '-CURENT-':
@@ -213,6 +231,22 @@ while True:
     if event == '-TASKS-':
         # just for testing
         db_func.show_table('Tasks')
+
+    if event[-1] ==  '+':
+        id_cur = split('[+-]',event)[-2]
+        task = db_func.get_row('Curent', id_cur)
+
+        t = db_func.time('Curent', id_cur)
+        delta = eval(task['duration']) - t
+        if delta < datetime.timedelta(0):
+            duration_str = str(eval(task['duration'])).split('.')[0]
+            text = f'Finished ({duration_str})'
+        else:
+            text = str(delta).split('.')[0]
+        window['INFO'].update(text)
+
+    if event[-1] ==  '-':
+        window['INFO'].update('')
 
     if event == 'Tab group':
         _, lst = interface.create_sq_table()
@@ -236,6 +270,8 @@ while True:
         d = eval(task['duration']).total_seconds()
         window['TIME-' + str(id)].update(str(t).split('.')[0])
         window['PROGRESS-' + str(id)].update(current_count = t.total_seconds(), max=d)
+        window['TIME-' + str(id_curent)].bind('<Enter>', '+')
+        window['TIME-' + str(id_curent)].bind('<Leave>', '-')
 
     # Updating a progress of active tasks in curent
     db_func.cur.execute("Select * FROM Curent WHERE active = 'True'",)

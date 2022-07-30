@@ -47,17 +47,13 @@ def create_sq_table() -> tuple:
 
 
 def task_layout(task_id = None):
-    ''' Returns a layout for a single task. Tasks are from table Tasks (not true?). 
-    taks_id is from Curent.
+    ''' Returns a layout for a single task. Tasks are from table Tasks (not true?). taks_id is from Curent.
     '''
 
     Tasks_options = [
         sg.Button('|>', key = "START-" + str(task_id)),
         sg.Button('||', key = "PAUSE-" + str(task_id)),
-        sg.Button('#', key = "STOP-" + str(task_id)),
-        sg.Button('Notes', key = "NOTES-" + str(task_id)),
-        sg.Button('Edit', key = "EDIT-" + str(task_id)),
-        sg.Button('Remove', key = "REMOVE-" + str(task_id))
+        sg.Button('Edit', key = "EDIT-" + str(task_id))
         ]
 
     # You need to take this data from database
@@ -125,6 +121,9 @@ def add_task_button(window)-> None:
     # Adding a row to layout in curent tab
     row = [task_layout(id_in_curent)]
     window.extend_layout(window["Today tasks"], row)
+
+    window['TIME-' + str(id_in_curent)].bind('<Enter>', '+')
+    window['TIME-' + str(id_in_curent)].bind('<Leave>', '-')
 
     return 
 
@@ -270,7 +269,7 @@ def edit_task(id, id_curent = None):
             sg.Input('seconds',key = '-TIMEs-',size = (h//3-r,v))  
             ],
 
-            [sg.Text('Parent',size = (h//3-r,v)), sg.Text(parent_string, key = "Parent",size = (h//3-r,v)), sg.Stretch(), sg.Button('Select parent', key = 'Select parent')],
+            [sg.Text('Parent',size = (h//3-r,v)), sg.Text(parent_string, key = "Parent",size = (h//3-r,v)), sg.Stretch()],
             # pop up with db table
 
             [sg.Text('Checkpoints',size = (h//3-r,v)),sg.Multiline(checkpoints_str, key = 'Checkpoints',size = (h-2,4)),],
@@ -488,6 +487,9 @@ def add_to_curent(selected_id: int, window) -> None:
 
     # extend the window['Today tasks']
     window.extend_layout(window["Today tasks"], row)
+
+    window['TIME-' + str(id_in_cur)].bind('<Enter>', '+')
+    window['TIME-' + str(id_in_cur)].bind('<Leave>', '-')
 
 
 
