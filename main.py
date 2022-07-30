@@ -28,8 +28,10 @@ tab1_layout = [
         [sg.VStretch()],
         [
             sg.Button("Add task", key = "-ADD TASK-"),
-            sg.Button("Clear", key = "-CLEAR-"),
-            sg.Button("Day", key = "-DAY-"), 
+            sg.Button("Clear Curent", key  = "-CLEAR CURENT-"),
+            sg.Stretch(),
+            sg.Button("Curent", key = "-CURENT-"),
+            sg.Button("Tasks", key = "-TASKS-"), 
             sg.Stretch(), 
             sg.Text(key = "INFO", justification= "right")
             ]
@@ -120,13 +122,13 @@ while True:
 
     if event == "Add to db":
         # check if the user exited earlier
-        temp = interface.add_task(c)
+        temp = interface.add_task()
         if temp is None:
             continue
         task_id = temp
 
         # creating list with updated values
-        _, lst = interface.create_sq_table(interface.db_func.cur)
+        _, lst = interface.create_sq_table()
 
         # updating the table
         window['Tab'].update(values = lst)
@@ -186,18 +188,32 @@ while True:
         db_func.deactivate('Curent', id, family = False)
         db_func.deactivate('Tasks', id_task)
 
+    if event == "-CLEAR CURENT-":
 
-    if event == '-CLEAR-':
+        db_func.cur.execute("Select * FROM Curent WHERE active = 'True'")
+        for task in db_func.cur.fetchall():
+            # from id in current to id in tasks
+            id_curent = int(task['id'])
+            id_task = int(task['id_tasks'])
+
+            db_func.deactivate('Curent', id_curent, family = False)
+            db_func.deactivate('Tasks', id_task)
+
+        con.commit()  
+
+
+        db_func.delete_table("Curent")
+        db_func.create_table_curent()
+
+
+    if event == '-CURENT-':
         # just for testing
         db_func.show_table('Curent')
 
-    if event == '-DAY-':
+    if event == '-TASKS-':
         # just for testing
         db_func.show_table('Tasks')
 
-
-
-    
     if event == 'Tab group':
         _, lst = interface.create_sq_table()
         window['Tab'].update(values = lst)

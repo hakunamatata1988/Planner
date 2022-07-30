@@ -7,10 +7,10 @@ for now 4 files in project: main.py, nutes, db_func.py, example.py, interface.py
 and one file to keep data: data.db
 
 To do:
-- save current table, and tasks table when quiting 
-- load right lay out for curent tab at the start
+- save current table, and tasks table when quiting +
+- load right lay out for curent tab at the start   +
 
-- clear button saves all data and load empty curent tab
+- clear button saves all data and load empty curent tab 
 - make not posible to change parent of a task
 - make posible to add untrack time (maybe in diffrent way)
 

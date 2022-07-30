@@ -292,7 +292,7 @@ def edit_task(id, id_curent = None):
             break
 
         if event == 'Select parent':
-            temp = id_name_from_db(cur)
+            temp = id_name_from_db()
             if temp != None:
                 parent_id, parent_name = temp
                 window_add_tasks['Parent'].update(f'Id: {parent_id} Name: {parent_name}')
