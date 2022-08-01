@@ -234,7 +234,7 @@ def deactivate(table:str, id:int, family = True) -> list:
 
 def time(table:str, id:int):
         '''
-        Sums up and returns times spend on the task. Should work on both tables (need column 'time_history', 'u_time' and 'active') 
+        Sums up and returns times spend on the task. Should work on both tables (need column 'time_history', 'u_time' and 'active') . Returning datetime.timedelta object.
         '''
         with con:
                 task = get_row(table,id)

@@ -13,14 +13,23 @@ To do:
 - clear button saves all data and load empty curent tab +
 - make not posible to change parent of a task +
 - show the remaining time when hovering over progress bar +
+- warning before removing task from db +
+- show sum of remaining tasks in curent (sum of planned tasks) + 
+    - negative time ramaining possible +
+- checkbox make the sesion done (in individual progres bars and in total (see update func in interface))
+- edit from database tab (dropdown manu?)
+- pre defined tasks list
 - make posible to add untrack time (maybe in diffrent way)
 
 -------
 compile to exe file and use
 
 Future plans:
+- show checkpoints, ability to cross them and show next
+- improve visuals
 - daily/weekly etc raports
 - filters 
 - tree view of the database (see pysimplegui.Tree)
 - progras bar when in Edit/notes view
-- 
+- ability to create new databases
+- sounds effects??

@@ -34,12 +34,14 @@ def create_window():
     tab1_layout = [
             [sg.Frame("Tasks", expand_x = True, key = "Today tasks", layout = interface.tasks_layout(ids_curent))],
             [sg.VStretch()],
+            [sg.Text(size = (4,None)), sg.Text(key = "-INFO TOTAL-", size = (29, None)), sg.ProgressBar(0,size = (10,20), expand_x = True, key = "PROGRESS-Total" ),sg.Text('time', key = "TIME-TOTAL",size = (6,None))],
             [
                 sg.Button("Add task", key = "-ADD TASK-"),
                 sg.Button("Clear Curent", key  = "-CLEAR CURENT-"),
                 sg.Stretch(),
                 sg.Button("Curent", key = "-CURENT-"),
                 sg.Button("Tasks", key = "-TASKS-"), 
+                sg.Button("Test", key = "Test"),
                 sg.Stretch(), 
                 sg.Text(key = "INFO", size = (15,None), justification= "right")
                 ]
@@ -68,19 +70,8 @@ def create_window():
 
     window = sg.Window('Tracker', layout, default_element_size=(12,1), finalize = True)    
 
-    # to update a progress bar, create a function?
-    db_func.cur.execute("Select * FROM Curent")
-    for task in db_func.cur.fetchall():
-        # from id in current to id in tasks
-        id_curent = int(task['id'])
-        id_task = int(task['id_tasks'])
-
-        t = db_func.time('Curent', id_curent)
-        d = eval(task['duration']).total_seconds()
-        window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
-        window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
-        window['TIME-' + str(id_curent)].bind('<Enter>', '+')
-        window['TIME-' + str(id_curent)].bind('<Leave>', '-')
+    # to update a progress bar
+    interface.update(window, start = True)
 
     return window
 
@@ -232,8 +223,16 @@ while True:
         # just for testing
         db_func.show_table('Tasks')
 
+    if event == "Test":
+        print('values =', values)
+
     if event[-1] ==  '+':
         id_cur = split('[+-]',event)[-2]
+        if id_cur == 'TOTAL':
+            window['INFO'].update(interface.update(window))
+            continue
+
+
         task = db_func.get_row('Curent', id_cur)
 
         t = db_func.time('Curent', id_cur)
@@ -242,7 +241,7 @@ while True:
             duration_str = str(eval(task['duration'])).split('.')[0]
             text = f'Finished ({duration_str})'
         else:
-            text = str(delta).split('.')[0]
+            text = 'Remaining ' +str(delta).split('.')[0]
         window['INFO'].update(text)
 
     if event[-1] ==  '-':
@@ -270,20 +269,11 @@ while True:
         d = eval(task['duration']).total_seconds()
         window['TIME-' + str(id)].update(str(t).split('.')[0])
         window['PROGRESS-' + str(id)].update(current_count = t.total_seconds(), max=d)
-        window['TIME-' + str(id_curent)].bind('<Enter>', '+')
-        window['TIME-' + str(id_curent)].bind('<Leave>', '-')
+        window['TIME-' + str(id)].bind('<Enter>', '+')
+        window['TIME-' + str(id)].bind('<Leave>', '-')
 
-    # Updating a progress of active tasks in curent
-    db_func.cur.execute("Select * FROM Curent WHERE active = 'True'",)
-    for task in db_func.cur.fetchall():
-        # from id in current to id in tasks
-        id_curent = int(task['id'])
-        id_task = int(task['id_tasks'])
-
-        t = db_func.time('Curent', id_curent)
-        d = eval(task['duration']).total_seconds()
-        window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
-        window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
+    # Updating a progress of tasks in curent
+    interface.update(window)
 
 
 con.commit()

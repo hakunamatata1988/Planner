@@ -73,7 +73,7 @@ def task_layout(task_id = None):
 
     Task_time = [sg.Text(str(t).split('.')[0], key = "TIME-" + str(task_id))]
     
-    raw =  [sg.Checkbox('', key = 'CHECKBOX-' + str(task_id), enable_events= True)] + [sg.Text(name , key = 'TASK NAME-' + str(task_id), size = (12,1))] + Tasks_options + Tasks_progress + Task_time
+    raw =  [sg.Checkbox('', key = 'CHECKBOX-' + str(task_id), enable_events= True)] + [sg.Text(name , key = 'TASK NAME-' + str(task_id), size = (16,1))] + Tasks_options + Tasks_progress + Task_time
 
     return raw
 
@@ -492,14 +492,11 @@ def add_to_curent(selected_id: int, window) -> None:
     window['TIME-' + str(id_in_cur)].bind('<Leave>', '-')
 
 
-
-
 def remove_from_db(selected_id: int):
     '''
     Remove task (selected_id) from Tasks table. Take care of parent data. Not refreshing database tab.
     selected_id : int (id in Tasks table)
     '''
-    # check if it is in current!!
 
     # check if task has a subtasks 
     row = db_func.get_row('Tasks',selected_id)
@@ -507,11 +504,18 @@ def remove_from_db(selected_id: int):
     if row == None:
         return
 
-    if eval(row['subtasks_id']) != []:
-        sg.Popup(f'There are some subtasks!') # lazy
+    # check if it is in current
+    sql = """SELECT * FROM CURENT WHERE id_tasks = ?"""
+    cur.execute(sql,(selected_id,))
+    if cur.fetchall():
+        sg.Popup(f'The task is in curent table! Clear the curen table before removing the task.') 
         return
 
-    # check if it is in current!!
+    if eval(row['subtasks_id']) != []:
+        sg.Popup(f'There are some subtasks! Remove subtasks before removing the task.') # lazy
+        return
+
+
 
     # check if task has a parent and remove it from parent 
     if row['parent_id'] != None:
@@ -525,4 +529,49 @@ def remove_from_db(selected_id: int):
 
     # remove task from db
     db_func.delete('Tasks', selected_id)
+
+
+def update(window, start = False):
+    ''''
+    Function that update progres bars of tasks in curent (and total time). Used at main loop (start = False) and at the start of the program  (start = True). Function returns str with info to print when hovering over total time.
+    '''
+    total_planned, total_remaining, total_working = datetime.timedelta(0), datetime.timedelta(0), datetime.timedelta(0)
+    db_func.cur.execute("Select * FROM Curent")
+    for task in db_func.cur.fetchall():
+        # from id in current to id in tasks
+        id_curent = int(task['id'])
+        # id_task = int(task['id_tasks'])
+
+        t = db_func.time('Curent', id_curent)
+        d = eval(task['duration']).total_seconds()
+        window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
+        window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
+        if start:
+            window['TIME-' + str(id_curent)].bind('<Enter>', '+')
+            window['TIME-' + str(id_curent)].bind('<Leave>', '-')
+
+        del_rem = eval(task['duration']) - t if eval(task['duration']) - t >  datetime.timedelta(0) else datetime.timedelta(0)
+
+        total_planned += eval(task['duration'])
+        total_remaining += del_rem
+        total_working += t
+
+
+    info_total = f'Total time planned {str(total_planned).split(".")[0]}'
+    window['PROGRESS-Total'].update(total_working.total_seconds(), max = total_working.total_seconds() + total_remaining.total_seconds())
+
+    if start:
+        window['TIME-' + 'TOTAL'].bind('<Enter>', '+')
+        window['TIME-' + 'TOTAL'].bind('<Leave>', '-')
+    
+    window["-INFO TOTAL-"].update(info_total)
+    window["TIME-TOTAL"].update(str(total_working).split(".")[0])
+
+    if total_remaining != datetime.timedelta(0):
+        mes = f"Remaining {str(total_remaining).split('.')[0]}"
+    else:
+        mes = f"Finished ({str(total_planned).split('.')[0]})"
+
+
+    return mes
     
