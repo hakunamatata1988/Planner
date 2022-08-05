@@ -38,6 +38,7 @@ def create_window():
             [
                 sg.Button("Add task", key = "-ADD TASK-"),
                 sg.Button("Clear Curent", key  = "-CLEAR CURENT-"),
+                sg.Button("Lists", key = "lists"),
                 sg.Stretch(),
                 sg.Button("Curent", key = "-CURENT-"),
                 sg.Button("Tasks", key = "-TASKS-"), 
@@ -113,6 +114,7 @@ while True:
 
     if event == "-ADD TASK-":
         interface.add_task_button(window)
+        continue # needed to read values from added layout
 
     if event == "Add to current":
         # get id of selected row or do nothing if nothing is selected
@@ -124,6 +126,7 @@ while True:
         selected_id = lst[raw][0]
 
         interface.add_to_curent(selected_id, window)
+        continue # needed to read values from added layout
 
     if event == "Add to db":
         # check if the user exited earlier
@@ -213,8 +216,6 @@ while True:
         window = create_window()
 
 
-
-
     if event == '-CURENT-':
         # just for testing
         db_func.show_table('Curent')
@@ -229,7 +230,7 @@ while True:
     if event[-1] ==  '+':
         id_cur = split('[+-]',event)[-2]
         if id_cur == 'TOTAL':
-            window['INFO'].update(interface.update(window))
+            window['INFO'].update(interface.update(window,values = values))
             continue
 
 
@@ -250,6 +251,15 @@ while True:
     if event == 'Tab group':
         _, lst = interface.create_sq_table()
         window['Tab'].update(values = lst)
+
+    if event == 'lists':
+        load = interface.lists(window, bcolor,tcolor)
+    
+        if load:
+            window.close()
+            window = create_window()
+        continue
+
 
     if isinstance(event,str) and event.split('-')[0] == "EDIT":
         id = int(event.split('-')[1])
@@ -273,7 +283,7 @@ while True:
         window['TIME-' + str(id)].bind('<Leave>', '-')
 
     # Updating a progress of tasks in curent
-    interface.update(window)
+    interface.update(window, values = values)
 
 
 con.commit()

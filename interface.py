@@ -1,4 +1,6 @@
+from calendar import c
 import PySimpleGUI as sg
+from sqlalchemy import desc
 import db_func
 import datetime
 
@@ -6,14 +8,17 @@ con = db_func.con
 cur = db_func.cur
 
 
-def create_sq_table() -> tuple:
+def create_sq_table(simple = False) -> tuple:
     '''
     Returns tuple Tab,lst where Tab is pysimplegui.Table() elements with data from Tasks table. lst is list with data from Tasks table.
     '''
     cur.execute(f"SELECT * FROM {'Tasks'}")
     data = cur.fetchall()
 
-    headings = ['id','name', 'parent', 'subtasks', 'time']
+    if simple:
+        headings = ['id','name']
+    else:
+        headings = ['id','name', 'parent', 'subtasks', 'time']
 
     lst = []
 
@@ -36,7 +41,11 @@ def create_sq_table() -> tuple:
         time = db_func.time('Tasks', raw['id']) 
         time_str = str(time).split(".")[0] # it get rids of miliseconds
 
-        lst.append([id,name, parent, subtasks, time_str])
+        if simple:
+            lst.append([id,name])
+        else:
+            lst.append([id,name, parent, subtasks, time_str])
+
 
     Tab = sg.Table(values = lst, headings = headings, enable_click_events = True, key = 'Tab')
     
@@ -458,11 +467,13 @@ def description(selected_id: int, window) -> None:
     '''
     window['description'].update(string)
 
-def add_to_curent(selected_id: int, window) -> None:
+def add_to_curent(selected_id: int, window, update_curent_tab = True, silent_mode = False) -> None:
     '''
     Insert task (selected_id) to Curent table. Update curent tab. Shows wornings if there is a family member in Curent already.
     selected_id : int
     window : pysimplequi.Window()
+    update_curent_tab: bool 
+    silent_mode: bool , choose True if you don't want messeges about family members in curent table
     '''
 
     # check if somebody from family is in curent
@@ -475,21 +486,22 @@ def add_to_curent(selected_id: int, window) -> None:
 
     colision = db_func.cur.fetchall()
 
-    if colision:
+    if colision and not silent_mode:
         family_members = [row['name'] for row in colision]
         sg.Popup(f'There is a task ({ ",".join(family_members) }) from family in curent.')
 
     # insert data to Curent table
     id_in_cur = db_func.insert_to_curent(selected_id)
 
-    # create a layout
-    row = [task_layout(id_in_cur)]
+    if update_curent_tab:
+        # create a layout
+        row = [task_layout(id_in_cur)]
 
-    # extend the window['Today tasks']
-    window.extend_layout(window["Today tasks"], row)
+        # extend the window['Today tasks']
+        window.extend_layout(window["Today tasks"], row)
 
-    window['TIME-' + str(id_in_cur)].bind('<Enter>', '+')
-    window['TIME-' + str(id_in_cur)].bind('<Leave>', '-')
+        window['TIME-' + str(id_in_cur)].bind('<Enter>', '+')
+        window['TIME-' + str(id_in_cur)].bind('<Leave>', '-')
 
 
 def remove_from_db(selected_id: int):
@@ -531,7 +543,7 @@ def remove_from_db(selected_id: int):
     db_func.delete('Tasks', selected_id)
 
 
-def update(window, start = False):
+def update(window, start = False, values = None):
     ''''
     Function that update progres bars of tasks in curent (and total time). Used at main loop (start = False) and at the start of the program  (start = True). Function returns str with info to print when hovering over total time.
     '''
@@ -544,13 +556,20 @@ def update(window, start = False):
 
         t = db_func.time('Curent', id_curent)
         d = eval(task['duration']).total_seconds()
+
         window['TIME-' + str(id_curent)].update(str(t).split('.')[0])
-        window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
+
+        if start or not bool(values['CHECKBOX-' + str(id_curent)]):
+            window['PROGRESS-' + str(id_curent)].update(current_count = t.total_seconds(), max=d)
+        else:
+            window['PROGRESS-' + str(id_curent)].update(current_count = 1, max=1)
+
         if start:
             window['TIME-' + str(id_curent)].bind('<Enter>', '+')
             window['TIME-' + str(id_curent)].bind('<Leave>', '-')
 
-        del_rem = eval(task['duration']) - t if eval(task['duration']) - t >  datetime.timedelta(0) else datetime.timedelta(0)
+        does_count = (eval(task['duration']) - t >  datetime.timedelta(0)) and not start and not bool(values['CHECKBOX-' + str(id_curent)])
+        del_rem = eval(task['duration']) - t if does_count else datetime.timedelta(0)
 
         total_planned += eval(task['duration'])
         total_remaining += del_rem
@@ -574,4 +593,177 @@ def update(window, start = False):
 
 
     return mes
+
+def lists(window, bcolor, tcolor):
+    '''Runs when you pres Lists button on Curent tab. Returns if some list should be loaded'''
+
+    column2 = [[sg.T("Description:")], 
+    [sg.Multiline("", key = "lists description",background_color = bcolor, text_color = tcolor, size = (30,4))],
+    [sg.Table(values = [[''],['']], headings = ['task',"time"], expand_x = True, key = 'Table', size = (None,8))]
+    ]
+
+    cur.execute('SELECT * FROM Lists')
+    data = [[str(row['id']),row['name'],row['description'],row['list']] for row in cur.fetchall()]
+
+    column1 = [[sg.Table(values = data, headings = ['id','Name','Description','list'],  s = (30,20), key = 'list names', enable_events= True, visible_column_map = [False,True,False,False], expand_x = True, col_widths = 20, auto_size_columns=False)],[sg.T("Total time:"), sg.T("", key = 'total time', size = (8,None))]]
+
+
+    layout = [[sg.Column(column1), sg.Column(column2)], 
+    [sg.Button('Load'),sg.Button('New'), sg.B("Remove", key = 'Remove'), sg.B("Cancel"), sg.B('Show Lists')]]
+
+
+    window_lists = sg.Window("Lists",layout )
+    load = False
+
+    while True:
+        event, values = window_lists.read()
+
+
+        if event in (sg.WIN_CLOSED,'Cancel'):
+            break
+
+        if event == "Show Lists":
+            db_func.show_table("Lists")
+
+        if event == 'New':
+            new_list()
+
+            # refresh of lists
+            cur.execute('SELECT * FROM Lists')
+            data = [[str(row['id']),row['name'],row['description'],row['list']] for row in cur.fetchall()]
+
+            window_lists['list names'].update(values = data)
+
+
+        if event == 'list names':
+            row_nr = values['list names'][0]
+            id = data[row_nr][0]
+            d = data[row_nr][2]
+            window_lists['lists description'].update(d)
+
+            table = []
+            total_time = datetime.timedelta(0)
+            ids = data[row_nr][3].split()
+            for id in ids:
+                sql = 'SELECT * from Tasks WHERE id = ?'
+                cur.execute(sql,(id,))
+                task = cur.fetchone()
+                table.append([task['name'], str(eval(task['duration'])).split('.')[0]])
+                total_time += eval(task['duration'])
+
+
+            window_lists['Table'].update(values = table)
+            window_lists['total time'].update(str(total_time).split('.')[0])
+
+        if event == 'Remove':
+            if values['list names'] == []:
+                sg.Popup(f'Choose the list.') 
+                continue
+
+            row_nr = values['list names'][0]
+            id = data[row_nr][0]
+            db_func.delete('Lists',id)
+
+            # refresh of lists
+            cur.execute('SELECT * FROM Lists')
+            data = [[str(row['id']),row['name'],row['description'],row['list']] for row in cur.fetchall()]
+
+            window_lists['list names'].update(values = data)
+
+        if event == 'Load':
+
+            # get id of selected row or do nothing if nothing is selected
+            if values['list names'] == []:
+                sg.Popup(f'Choose the list.') 
+                continue
+
+            row_nr = values['list names'][0]
+            ids = data[row_nr][3].split()
+
+            db_func.cur.execute("Select * FROM Curent WHERE active = 'True'")
+            for task in db_func.cur.fetchall():
+                # from id in current to id in tasks
+                id_curent = int(task['id'])
+                id_task = int(task['id_tasks'])
+
+                db_func.deactivate('Curent', id_curent, family = False)
+                db_func.deactivate('Tasks', id_task)
+
+            db_func.delete_table("Curent")
+            db_func.create_table_curent()
+
+            if ids:
+                for id in ids:
+                    add_to_curent(id, window, update_curent_tab=False, silent_mode = True)
+
+            con.commit()  
+            load = True
+            break
+
+        
+    window_lists.close()
+
+    return load
+
+def new_list():
+    '''Runs when you press New button on Lists window.'''
+
+    t , lst = create_sq_table(simple = True)
+
+    layout = [
+        [sg.Text("Name:", s = (10,None)), sg.Input( key = 'Input', size = (20,4))],
+        [sg.Text("Description:", s = (10,None)), sg.Multiline( key = 'Description', size = (20,4))],
+        [sg.Text("Tasks:", s = (10,None)),sg.Text("",key = "tasks ids")],
+        [t],
+        [sg.B("Save")]
+        ]
+
+
+    window_new_list = sg.Window("New list", layout, finalize = True)
+
+
+    while True:
+        event, values = window_new_list.read()
+
+        if event in (sg.WIN_CLOSED,'Cancel'):
+            break
+
+        # if event:
+            # print('event = ', event, '\n values = ', values)
+
+        if isinstance(event,tuple) and event[2][0] != None:
+            row = event[2][0]
+
+            selected_id = lst[row][0]
+            old = window_new_list["tasks ids"].get()
+            window_new_list["tasks ids"].update(old + ' ' + str(selected_id))
+
+        if event == "Save":
+            # check if name is writen
+            if values['Input'].strip() == '':
+                sg.Popup(f'Enter the name of the list.') 
+                continue
+
+            if window_new_list["tasks ids"].get().strip() == '':
+                sg.Popup(f'Choos some tasks.') 
+                continue
+
+            name = values['Input'].strip()
+            des  = values['Description']
+            ids = window_new_list["tasks ids"].get()
+
+            # insert the list to list table
+            db_func.insert_to_lists(name,des,ids)
+            # close window
+            break
+
+
+
+
+        
+    window_new_list.close()
+
+
+
+
     

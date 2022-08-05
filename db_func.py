@@ -50,6 +50,19 @@ def create_table_curent() -> None:
                         active TEXT
                 )""")
 
+def create_table_lists() -> None:
+        '''
+        Creates a table Lists in database. Retuns None;
+        '''
+        with con:
+                cur.execute(""" CREATE TABLE Lists (
+                        id INTEGER PRIMARY KEY,
+                        name TEXT,
+                        description TEXT,
+                        list of tasks TEXT                       
+
+                )""")
+
 
 def insert(table, name, id = None, duration = datetime.timedelta(0), u_time = datetime.timedelta(0), parent_id = None, checkpoints = '', notes = ''):
         '''Insert a recor to db (table Tasks),  retuns id of the inserted record. Name can be set to Tasks'''
@@ -88,7 +101,15 @@ def insert_to_curent(id_tasks, u_time = datetime.timedelta(0)) -> int:
 
                 return cur.lastrowid
                 
+def insert_to_lists(name,des,lst):
+        '''Insert a recor to db (table Lists).'''
+        with con:
 
+                cur.execute(f"""INSERT INTO Lists VALUES 
+                        (NULL, ?, ?,?)""",
+                        (name, des, lst)
+                )
+        
 
 def delete(table: str, id : int) -> None:
         '''Delete record from table (arbitrary) by id.'''
