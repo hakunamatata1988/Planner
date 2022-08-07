@@ -5,6 +5,7 @@ Run to quickly set up some database. Table Curent will be empty. Not sure about 
 
 import db_func
 
+# db_func.delete_table("Lists")
 # db_func.create_table_lists()
 
 # db_func.delete_table("Tasks")

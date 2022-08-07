@@ -17,16 +17,18 @@ To do:
 - show sum of remaining tasks in curent (sum of planned tasks) + 
     - negative time ramaining possible +
 - checkbox make the sesion done (in individual progres bars and in total (see update func in interface)) +
-- pre defined tasks list
+- pre defined tasks list +-
     - cant add Python (first row) to the lists +
     - remove info about family members + 
-    - think how to deal with task that are no longer in db (can there be diffrent task with the same id now?)
-    - refresh list table after removing one (or creating)
-- make posible to add untrack time (maybe in diffrent way)
-- edit from database tab (dropdown manu?)
+    - refresh list table after removing one (or creating) +
 
 -------
 compile to exe file and use
+-------
+
+- make posible to add untrack time (maybe in diffrent way)
+- edit from database tab (dropdown manu?)
+- think how to deal with task that are no longer in db (can there be diffrent task with the same id now?, make a better table architecture?)
 
 Future plans:
 - show checkpoints, ability to cross them and show next

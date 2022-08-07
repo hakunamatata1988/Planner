@@ -40,9 +40,9 @@ def create_window():
                 sg.Button("Clear Curent", key  = "-CLEAR CURENT-"),
                 sg.Button("Lists", key = "lists"),
                 sg.Stretch(),
-                sg.Button("Curent", key = "-CURENT-"),
-                sg.Button("Tasks", key = "-TASKS-"), 
-                sg.Button("Test", key = "Test"),
+                # sg.Button("Curent", key = "-CURENT-"),
+                # sg.Button("Tasks", key = "-TASKS-"), 
+                # sg.Button("Test", key = "Test"),
                 sg.Stretch(), 
                 sg.Text(key = "INFO", size = (15,None), justification= "right")
                 ]

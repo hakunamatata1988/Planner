@@ -609,7 +609,9 @@ def lists(window, bcolor, tcolor):
 
 
     layout = [[sg.Column(column1), sg.Column(column2)], 
-    [sg.Button('Load'),sg.Button('New'), sg.B("Remove", key = 'Remove'), sg.B("Cancel"), sg.B('Show Lists')]]
+    [sg.Button('Load'),sg.Button('New'), sg.B("Remove", key = 'Remove'), sg.B("Cancel"), 
+    # sg.B('Show Lists')
+    ]]
 
 
     window_lists = sg.Window("Lists",layout )
